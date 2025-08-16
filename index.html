@@ -1,0 +1,2422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Wastelife: A Post-Apocalyptic Life Sim</title>
+<style>
+  :root {
+    --bg:#101710;
+    --panel:#0e1a0e;
+    --accent:#3af53a;
+    --accent-dim:#1ea31e;
+    --danger:#ff6b6b;
+    --warn:#ffd166;
+    --ok:#06d6a0;
+    --text:#d7ffd7;
+    --muted:#9bd39b;
+    --shadow:0 10px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(58,245,58,.15);
+    --radius:14px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    --sans:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+  }
+
+  /* let page grow, always fill background */
+  html,body{min-height:100%}
+
+  body {
+    margin:0;
+    background:
+      radial-gradient(1200px 800px at 30% -10%, #143d14 0%, var(--bg) 50%) no-repeat,
+      var(--bg);
+    background-attachment:fixed;
+    background-color:var(--bg);
+    font-family:var(--sans);
+    color:var(--text);
+    line-height:1.4;
+  }
+
+  .wrap{max-width:1200px;margin:32px auto;padding:0 16px;}
+  header{display:grid;gap:12px;grid-template-columns:1fr;margin-bottom:16px;}
+  .topbar{display:grid;gap:12px;grid-template-columns:1.1fr 1fr;}
+  @media(max-width:1000px){.topbar{grid-template-columns:1fr}}
+
+  .card{background:linear-gradient(180deg,rgba(58,245,58,.05),rgba(0,0,0,.0));
+    border:1px solid rgba(58,245,58,.25);box-shadow:var(--shadow);
+    border-radius:var(--radius);padding:14px;}
+  .title{font-family:var(--mono);color:var(--accent);letter-spacing:.5px;
+    display:flex;align-items:center;gap:10px;font-size:18px;margin:0 0 6px;}
+
+  .grid{display:grid;gap:12px;grid-template-columns:330px 1fr;}
+  @media(max-width:1000px){.grid{grid-template-columns:1fr}}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+  .pill{border:1px solid rgba(58,245,58,.4);padding:6px 10px;
+    border-radius:999px;font-family:var(--mono);background:rgba(0,0,0,.2)}
+
+  .stat{margin:8px 0}
+  .stat-label{display:flex;justify-content:space-between;font-size:12px;
+    color:var(--muted);font-family:var(--mono)}
+  .bar{height:12px;border-radius:8px;background:rgba(58,245,58,.15);
+    overflow:hidden;border:1px solid rgba(58,245,58,.3)}
+  .bar>i{display:block;height:100%;background:var(--accent);
+    box-shadow:inset 0 0 12px rgba(0,0,0,.4)}
+  .bar.warn>i{background:var(--warn)}
+  .bar.danger>i{background:var(--danger)}
+
+  .actions{display:grid;gap:8px}
+  .actions button{all:unset;cursor:pointer;padding:10px 12px;border-radius:10px;
+    border:1px solid rgba(58,245,58,.35);
+    background:linear-gradient(180deg,rgba(58,245,58,.08),rgba(0,0,0,.2));
+    font-family:var(--mono);color:var(--text)}
+  .actions button:hover{border-color:var(--accent)}
+  .actions .group{display:grid;gap:8px}
+
+  .log{height:540px;overflow:auto;padding-right:6px}
+  .entry{padding:10px 12px;border-left:3px solid rgba(58,245,58,.35);
+    background:rgba(0,0,0,.2);border-radius:10px;margin:8px 0}
+  .entry p{margin:0}
+  .choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .choice{all:unset;cursor:pointer;padding:8px 10px;border-radius:8px;
+    border:1px solid rgba(58,245,58,.35);font-family:var(--mono)}
+  .choice:hover{border-color:var(--accent)}
+
+  .muted{color:var(--muted)}
+  .hr{height:1px;background:rgba(58,245,58,.25);margin:10px 0}
+  footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .linklike{all:unset;cursor:pointer;color:var(--accent);font-family:var(--mono)}
+  .dangerous{color:var(--danger)}
+  .center{text-align:center}
+
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);
+    display:none;place-items:center;z-index:10;}
+  .modal{width:min(880px,92vw);max-height:80vh;overflow:auto}
+  .modal .title{position:sticky;top:0;
+    background:linear-gradient(180deg,rgba(16,23,16,1),rgba(16,23,16,.85));
+    padding:14px;border-bottom:1px solid rgba(58,245,58,.25);z-index:1}
+  .kv{display:grid;grid-template-columns:160px 1fr;gap:8px;margin:10px 0;
+    font-family:var(--mono)}
+  .small{font-size:12px}
+  .hidden{display:none!important}
+
+  /* faction pill theming */
+  #faction-pill-wrapper{cursor:pointer;transition:background .2s,color .2s;}
+  .faction-settlers{background:#d9f2d9;color:#225522;}
+  .faction-rangers{background:#d9eaf2;color:#1d3d55;}
+  .faction-scribes{background:#f2e9d9;color:#553d1d;}
+  .faction-raiders{background:#f2d9d9;color:#551d1d;}
+  .faction-none{background:#eee;color:#444;}
+
+/* ── Faction Menu Enhancements ─────────────────────────────── */
+.faction-header {
+  padding: 14px;
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(58,245,58,.35);
+}
+
+.faction-header.settlers { border-color:#3af53a; }
+.faction-header.rangers  { border-color:#1da1f2; }
+.faction-header.scribes  { border-color:#f2b84b; }
+.faction-header.raiders  { border-color:#ff4d4d; }
+
+.rep-bar {
+  height: 12px;
+  border-radius: 8px;
+  background: rgba(58,245,58,.15);
+  border: 1px solid rgba(58,245,58,.3);
+  overflow: hidden;
+  margin: 4px 0;
+}
+.rep-bar > i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.faction-action {
+  background: rgba(0,0,0,.2);
+  border: 1px solid rgba(58,245,58,.25);
+  border-radius: var(--radius);
+  padding: 10px;
+  margin: 8px 0;
+}
+.faction-action .label {
+  font-family: var(--mono);
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+
+/* Solid background for modals only */
+.modal.card {
+  background: var(--panel); /* solid dark panel */
+} 
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="card">
+    <h1 class="title">WASTELIFE ▸ <span id="header-status" class="muted">new run</span></h1>
+    <div class="topbar">
+      <div class="card">
+        <div class="row">
+          <div class="pill">Name: <b id="name">—</b></div>
+<!-- Stat pills row -->
+<div class="pills">
+  <div class="pill">Age: <b id="age">18</b></div>
+  <div class="pill">HP: <b id="hp">100/100</b></div>
+  <div class="pill">Caps: <b id="caps">0</b></div>
+  <div class="pill">Karma: <b id="karma">0</b></div>
+  <div class="pill">Level: <b id="level">1</b> (<span id="xp">0</span> XP)</div>
+  <div class="pill">RAD: <b id="rad">0</b></div>
+  <!-- Unified clickable Faction pill -->
+  <div class="pill" id="faction-pill-wrapper">
+    Faction: <b id="faction-pill">Unaffiliated</b>
+  </div>
+</div>
+
+        <div id="special" class="row" style="margin-top:8px; flex-wrap:wrap"></div>
+      </div>
+      <div class="card">
+        <div class="row">
+          <div class="pill">Origin: <b id="origin">—</b></div>
+          <div class="pill">Job: <b id="job">—</b></div>
+          <div class="pill">Location: <b id="location">—</b></div>
+          <div class="pill">Year: <b id="year">2165</b></div>
+        </div>
+        <div class="hr"></div>
+        <div class="row small">
+          <span class="muted">Tip: Hit “Age Up” yearly. Choices affect S.P.E.C.I.A.L., caps, karma, and survival.</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="grid">
+    <aside class="card">
+      <div class="title">Actions</div>
+      <div class="actions">
+        <div class="group">
+          <button id="btn-age">▸ Age Up (1 year)</button>
+          <button id="btn-explore">Explore the Wasteland</button>
+          <button id="btn-work">Work / Scavenge</button>
+          <button id="btn-heal">Treat Wounds / AntiRad (Cost: 12 Caps)</button>
+        </div>
+        <div class="hr"></div>
+        <div class="group">
+		<button id="btn-relationships">Relationships</button>
+		<button id="btn-inventory">Inventory</button>
+		<button id="btn-trade">Visit Trader</button>
+		<button id="btn-join-faction">Join a Faction</button>
+		<button id="btn-perks">Perks</button>
+        </div>
+        <div class="hr"></div>
+        <div class="group">
+          <button id="btn-save">Save</button>
+          <button id="btn-load">Load</button>
+          <button id="btn-reset" class="dangerous">New Run</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="card">
+      <div class="title">Life Log</div>
+      <div id="log" class="log"></div>
+      <footer>
+        <span class="muted small">Wastelife is an original, fan-made life sim. Survive, thrive, and make choices. No two runs are the same.</span>
+      </footer>
+    </section>
+  </main>
+</div>
+
+<!-- Modals -->
+<div id="modal-backdrop" class="modal-backdrop">
+  <div class="card modal" role="dialog" aria-modal="true">
+    <h2 class="title" id="modal-title">Modal</h2>
+    <div id="modal-content"></div>
+    <div class="hr"></div>
+    <div class="row" style="padding:0 14px 14px">
+      <button class="linklike" id="modal-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ========= Utility =========
+// NOTE: These helpers ( $, el, rnd, sample, clamp ) are general-purpose.
+// Add new helper functions here if you want them available everywhere.
+
+const $ = sel => document.querySelector(sel);
+const el = (t, cls, txt) => {
+  const n = document.createElement(t);
+  if (cls) n.className = cls;
+  if (txt != null) n.textContent = txt;
+  return n;
+};
+const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const sample = arr => arr[Math.floor(Math.random()*arr.length)];
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+/* ========= Combat Helpers ========= */
+// Tiny RNG helpers for combat math
+const roll = (n=20) => rnd(1, n);                  // d20 style
+const chance = p => Math.random() < p;             // p: 0..1
+
+// Get player total ATK/DEF from equipment + S.P.E.C.I.A.L.
+function playerBattleStats(){
+  const gear = calcStats(); // {atk, def}
+  // modest S.P.E.C.I.A.L. influence
+  const atk = gear.atk + Math.floor(state.special.S * 0.6) + Math.floor(state.special.A * 0.4);
+  const def = gear.def + Math.floor(state.special.E * 0.7) + Math.floor(state.special.P * 0.3);
+  const spd = 10 + state.special.A * 2; // determines turn order & flee
+  const crit = 0.05 + (state.special.L * 0.005);   // 5% base + luck
+  return { atk, def, spd, crit };
+}
+
+// Common reward applier
+function grantBattleRewards(rew){
+  let cap = rew.caps || 0, xp = rew.xp || 0;
+  if (state.perks.includes("scrounger")) cap = Math.round(cap * 1.15);
+  if (cap) { state.caps += cap; }
+  if (xp)  { gainXP(xp); }
+  if (rew.rad) rad(rew.rad);
+  if (rew.items){
+    for (const [id, q] of Object.entries(rew.items)) addItem(id, q);
+  }
+}
+
+// Hook to spin up combat with probability; returns true if combat started
+function maybeStartCombat(prob=0.3, tier="wastes", source="explore"){
+  if (!state.alive) return false;
+  if (!chance(prob)) return false;
+  const enemy = generateEnemy(tier);
+  openCombat(enemy, { source });
+  return true;
+}
+
+/* ========= Items & Inventory Helpers ========= */
+// NOTE: Add new items to ITEMS
+// NOTE: Add new crafting recipes to RECIPES
+
+const ITEMS = {
+  canteen: { 
+    name:"Canteen",     
+    desc:"Refillable water bottle. Restores a bit of health or reduces radiation.",
+    use:()=>{ 
+      if(state.rad > 0){ 
+        derad(5); 
+        log("You sip clean water. RAD -5."); 
+      } else { 
+        heal(2); 
+        log("You sip water. HP +2."); 
+      }
+      return true; 
+    }
+  },
+  helmet: { name:"Makeshift Helmet", desc:"Protects your head. +2 defense.", slot:"head", bonus:{def:2} },
+  armor:  { name:"Leather Armor", desc:"Light chest armor. +3 defense.", slot:"chest", bonus:{def:3} },
+  boots:  { name:"Sturdy Boots", desc:"Protect your legs. +1 defense.", slot:"legs", bonus:{def:1} },
+  knife:  { name:"Combat Knife", desc:"Reliable melee weapon. +6 attack.", slot:"weapon", bonus:{atk:6} },
+  junk: { 
+    name:"Junk",        
+    desc:"Assorted scrap. Useful for crafting or selling." 
+  },
+  duct_tape: { 
+    name:"Duct Tape",   
+    desc:"Binds the world together. Often used in crafting." 
+  },
+  med_patch: { 
+    name:"Med Patch",   
+    desc:"Heals 15 HP.", 
+    use:()=>{ heal(15); log("You apply a Med Patch. HP +15."); return true; }
+  },
+  antirad: { 
+    name:"AntiRad",     
+    desc:"Reduces RAD by 12.", 
+    use:()=>{ derad(12); log("You take AntiRad. RAD -12."); return true; }
+  },
+  food: { 
+    name:"Canned Food", 
+    desc:"Heals 4 HP or can be consumed before travel.", 
+    use:()=>{ heal(4); log("You eat canned food. HP +4."); return true; }
+  },
+  holotape: { 
+    name:"Ancient Holotape", 
+    desc:"Collectors pay well. Can be sold to traders." 
+  },
+  water_filter:{ 
+    name:"Water Filter", 
+    desc:"Allows safe refilling of a canteen at events.",
+    use:()=>{ 
+      if(countItem("canteen") > 0){ 
+        heal(5); 
+        log("You purify and drink water. HP +5."); 
+        return true; 
+      } 
+      log("You need a canteen to use the Water Filter."); 
+      return false;
+    }
+  },
+  scrap_blade: {
+    name:"Scrap Blade",
+    desc:"A crude melee weapon. Increases combat effectiveness.",
+    slot:"weapon",
+    bonus:{ atk:5 },
+    use:()=>{ equipItem("scrap_blade"); return false; }
+  }
+};
+
+// simple recipes: requires → produces
+const RECIPES = [
+  {id:"repair_kit", name:"Repair Kit", 
+   requires:{junk:1, duct_tape:1}, 
+   produces:{med_patch:1},
+   desc:"1 Junk + 1 Duct Tape → 1 Med Patch"},
+  
+  {id:"sell_junk", name:"Sell Junk Bundle", 
+   requires:{junk:3}, 
+   produces:{caps:12},
+   desc:"Trade 3 Junk for 12 caps."},
+
+  {id:"craft_blade", name:"Craft Scrap Blade", 
+   requires:{junk:2, duct_tape:1}, 
+   produces:{scrap_blade:1},
+   desc:"2 Junk + 1 Duct Tape → 1 Scrap Blade"}
+];
+
+// ========= Equipment System =========
+// Tracks equipped gear and bonuses
+
+// expand state on new runs
+function initEquipment(){
+  if(!state.equipment){
+    state.equipment = { head:null, chest:null, legs:null, weapon:null };
+  }
+}
+
+function equipItem(id){
+  const meta = ITEMS[id];
+  if(!meta || !meta.slot){ log("That item can’t be equipped."); return false; }
+
+  // unequip existing
+  if(state.equipment[meta.slot]){
+    addItem(state.equipment[meta.slot], 1);
+  }
+
+  // equip new
+  state.equipment[meta.slot] = id;
+  removeItem(id,1);
+  log(`You equipped ${meta.name} in ${meta.slot} slot.`);
+  updateUI();
+  return true;
+}
+
+function unequip(slot){
+  if(!state.equipment[slot]){ log("Nothing equipped there."); return false; }
+  addItem(state.equipment[slot],1);
+  log(`You unequipped ${ITEMS[state.equipment[slot]].name}.`);
+  state.equipment[slot] = null;
+  updateUI();
+  return true;
+}
+
+function calcStats(){
+  let atk = 0, def = 0;
+  for(const slot of Object.keys(state.equipment)){
+    const id = state.equipment[slot];
+    if(id && ITEMS[id].bonus){
+      atk += ITEMS[id].bonus.atk || 0;
+      def += ITEMS[id].bonus.def || 0;
+    }
+  }
+  return {atk, def};
+}
+
+function showEquipment(){
+  let txt = "Equipped Gear:<br>";
+  for(const slot of ["head","chest","legs","weapon"]){
+    const id = state.equipment[slot];
+    txt += `${slot}: ${id ? ITEMS[id].name : "None"}<br>`;
+  }
+  return txt;
+}
+
+
+// ========= Inventory Functions =========
+function inv(){ return state.inventory || (state.inventory = []); }
+
+function findStack(id){
+  id = slugify(id);                 // normalize e.g. "Duct Tape" -> "duct_tape"
+  return inv().find(s => s.id === id);
+}
+
+function addItem(id, qty = 1){
+  // accept flexible inputs and normalize to {id, qty}
+  if (id && typeof id === "object") {
+    // { id:"junk", qty:2 }
+    if ("id" in id && "qty" in id) return addItem(id.id, id.qty || 1);
+    // { junk:2, duct_tape:1 }
+    for (const [k, v] of Object.entries(id)) addItem(k, Number(v) || 1);
+    return;
+  }
+  id = slugify(id);
+  const it = findStack(id);
+  if (it) it.qty += qty;
+  else inv().push({ id, qty });
+}
+
+function countItem(id){
+  const s = findStack(id);
+  return s ? s.qty : 0;
+}
+
+function removeItem(id, qty = 1){
+  id = slugify(id);
+  const it = findStack(id);
+  if (!it) return false;
+  it.qty -= qty;
+  if (it.qty <= 0) state.inventory = inv().filter(s => s !== it);
+  return true;
+}
+
+// req shape: { itemId: quantity, caps?: number }
+function hasItems(req){
+  return Object.entries(req).every(([id, n]) =>
+    (id === "caps" ? state.caps : countItem(id)) >= n
+  );
+}
+
+// sign -1 to consume req, +1 to grant req
+function applyDelta(req, sign){
+  for (const [id, n] of Object.entries(req)){
+    if (id === "caps"){ state.caps += sign * n; continue; }
+    if (sign < 0) removeItem(id, n); else addItem(id, n);
+  }
+}
+
+function useItem(id){
+  const meta = ITEMS[id];
+  if (!meta || !meta.use){
+    log("You can’t use that.");
+    return false;
+  }
+  const ok = meta.use();         // meta.use returns true if consumed
+  if (ok) removeItem(id, 1);
+  updateUI();
+  return ok;
+}
+
+function craft(recipeId){
+  const r = RECIPES.find(x => x.id === recipeId);
+  if (!r){ log("No such recipe."); return; }
+  if (!hasItems(r.requires)){ log("Missing ingredients."); return; }
+
+  // consume inputs
+  applyDelta(r.requires, -1);
+
+  // grant outputs
+  if (r.produces.caps) state.caps += r.produces.caps;
+  for (const [id, n] of Object.entries(r.produces)){
+    if (id !== "caps") addItem(id, n);
+  }
+
+  log(`Crafted: ${r.name}.`);
+  updateUI();
+}
+
+
+/* ========= Game Data ========= */
+// NOTE: All static game data: names, origins, locations, jobs, factions, perks
+// - Add new jobs in JOBS[]
+// - Add new factions in FACTIONS[]
+// - Add new perks in PERKS[]
+
+const NAMES = ["Ash","Rae","Piper","Vale","Rook","Nova","Jax","Morgan","Quinn","Alex","Harper","Rowan","Kit","Dak","Remy","Skye","Indy","Jet","Mack","Sable","Rune","Tess","Wren","Zed"];
+const ORIGINS = ["Vault-Born","Wastelander","Settlement Kid","Ghoul-Friendly Enclave"];
+const LOCATIONS = ["Dustown","Copper Flats","Old Boston Ruins","Juniper Station","Vault 47","Grayridge","Red Mesa","Harbor Nine"];
+const JOBS = [
+  { id:"none", name:"Unemployed", minAge:0, base:0, req:()=>true },
+  { id:"scav", name:"Scavenger", minAge:14, base: rnd(10,25), req:s=>s.S>=3 },
+  { id:"trader", name:"Caravan Trader", minAge:16, base: rnd(20,40), req:s=>s.C>=5 },
+  { id:"guard", name:"Settlement Guard", minAge:16, base: rnd(25,55), req:s=>s.S>=5 && s.E>=5 },
+  { id:"scribe", name:"Scribe", minAge:18, base: rnd(35,70), req:s=>s.I>=6 },
+  { id:"med", name:"Field Medic", minAge:18, base: rnd(40,80), req:s=>s.I>=7 && s.P>=5 }
+];
+
+const FACTIONS = [
+  { id:"none", name:"Unaffiliated", req: s=>true, blurb:"You walk your own road." },
+  { id:"settlers", name:"Settlers Union", req: s=>s.C>=4, blurb:"Builders and traders striving for stability." },
+  { id:"rangers", name:"Desert Rangers", req: s=>s.A>=5 && s.P>=5, blurb:"Lean, disciplined scouts of the wastes." },
+  { id:"scribes", name:"Scribes of the Old World", req: s=>s.I>=6, blurb:"Archivists preserving tech and knowledge." },
+  { id:"raiders", name:"Dust Marauders", req: s=>s.S>=6 || s.L>=7, blurb:"Lawless plunderers—high risk, high reward." }
+];
+
+const PERKS = [
+  { id:"toughness", name:"Toughness", desc:"+10 max HP", req:(state)=> state.level>=3 },
+  { id:"silverTongue", name:"Silver Tongue", desc:"+15% job pay & trade", req:(state)=> state.special.C>=6 },
+  { id:"scrounger", name:"Scrounger", desc:"Better loot on Explore", req:(state)=> state.special.L>=6 },
+  { id:"medic", name:"Medic", desc:"Heal more; reduce RAD", req:(state)=> state.special.I>=6 },
+  { id:"swift", name:"Swift", desc:"+10% escape chances", req:(state)=> state.special.A>=6 },
+];
+
+/* ========= Enemies ========= */
+// tier: "wastes" | "work" | "raiders" | "rangers" etc.
+const ENEMIES = [
+  { id:"molerat",    name:"Molerat",    tier:"wastes",  hp:28, atk:6,  def:2,  spd:9,  reward:{ xp:10, caps: rnd(3,7) } },
+  { id:"wild_dogs",  name:"Wild Dogs",  tier:"wastes",  hp:34, atk:7,  def:3,  spd:11, reward:{ xp:12, caps: rnd(4,9) } },
+  { id:"raider_thug",name:"Raider Thug",tier:"raiders", hp:42, atk:9,  def:4,  spd:10, reward:{ xp:16, caps: rnd(8,16) } },
+  { id:"feral",      name:"Feral Ghoul",tier:"wastes",  hp:40, atk:8,  def:4,  spd:12, reward:{ xp:14, caps: rnd(6,12) } },
+  { id:"scav_band",  name:"Scav Bandit",tier:"work",    hp:36, atk:8,  def:4,  spd:10, reward:{ xp:14, caps: rnd(7,13) } },
+  { id:"mutant_verm",name:"Mutant Vermin", tier:"wastes", hp:30, atk:7, def:3, spd:13, reward:{ xp:12, caps: rnd(5,10) } },
+  { id:"raider_gun", name:"Raider Gunner", tier:"raiders", hp:50, atk:11, def:5, spd:12, reward:{ xp:20, caps: rnd(12,22) } },
+  { id:"waste_stalker", name:"Wasteland Stalker", tier:"rangers", hp:46, atk:10, def:5, spd:14, reward:{ xp:18, caps: rnd(9,18) } },
+];
+
+// Simple generator that picks by tier (falls back to wastes)
+function generateEnemy(tier="wastes"){
+  const pool = ENEMIES.filter(e=>e.tier===tier);
+  const base = (pool.length? pool : ENEMIES.filter(e=>e.tier==="wastes"));
+  const e = sample(base);
+  // Copy with fresh HP so we don’t mutate base definition
+  return { ...e, curHP: e.hp };
+}
+
+
+const SPECIAL_KEYS = ["S","P","E","C","I","A","L"];
+
+/* ========= Game State ========= */
+let state = null;
+
+function newRun() {
+  const name = sample(NAMES);
+  const origin = sample(ORIGINS);
+  const location = sample(LOCATIONS);
+  const S = Object.fromEntries(SPECIAL_KEYS.map(k=>[k, rnd(1,10)]));
+  let pool = 5; while (pool--) { const k = sample(SPECIAL_KEYS); S[k] = clamp(S[k]+1,1,10); }
+
+  state = {
+    alive: true,
+    year: 2165,
+    age: 18,
+    name, origin, location,
+    special: S,
+    hp: 100, hpMax: 100,
+    rad: 0,
+    caps: rnd(5,25),
+    karma: 0,
+    level: 1, xp: 0,
+    job: "none",
+    faction: "none",
+    inventory: ["Canteen","Junk","Duct Tape"],
+    relationships: seedRelationships(),
+    perks: [],
+    pendingChoice: null,
+    log: [],
+    factionRep: 0,
+    factionActionUsed: false,
+    equipment: { head:null, chest:null, legs:null, weapon:null },
+    battlesWon: 0,
+    battlesLost: 0,
+  };
+
+  log(`You begin at age 18...`);
+  log(`Your S.P.E.C.I.A.L.: ${SPECIAL_KEYS.map(k=>k+":"+state.special[k]).join(" ")}`, "muted");
+  updateUI();
+}
+
+function seedRelationships() {
+  const rel = [];
+  for (let i=0;i<3;i++){
+    rel.push({
+      id: crypto.randomUUID(),
+      name: sample(NAMES)+" "+sample(["Smith","Vale","Turner","Lee","Morales","Nguyen","Khan","Parker"]),
+      bond: rnd(30,70),
+      romance:false
+    });
+  }
+  return rel;
+}
+
+/* ========= UI ========= */
+function updateUI() {
+  $("#name").textContent = state.name;
+  $("#age").textContent = state.age;
+  $("#caps").textContent = state.caps;
+  $("#karma").textContent = state.karma;
+  $("#level").textContent = state.level;
+  $("#xp").textContent = state.xp;
+  $("#hp").textContent = state.hp;
+  $("#rad").textContent = state.rad;
+  $("#origin").textContent = state.origin;
+  $("#job").textContent = getJob().name;
+  $("#location").textContent = state.location;
+  $("#year").textContent = state.year;
+  $("#header-status").textContent = state.alive ? "alive" : "deceased";
+
+  // Update the sidebar button label based on faction status
+  const joinBtn = $("#btn-join-faction");
+  if (joinBtn) {
+    joinBtn.textContent = (state.faction === "none")
+      ? "Join a Faction"
+      : "View Faction";
+  }
+
+  // --- Faction pill update ---
+  const f = getFaction();
+  const pillWrap = $("#faction-pill-wrapper");
+
+  if (state.faction === "none") {
+    $("#faction-pill").textContent = "Unaffiliated";
+  } else {
+    $("#faction-pill").textContent = `${f.name} (Rep ${state.factionRep})`;
+  }
+
+  // reset + apply faction color class
+  pillWrap.classList.remove(
+    "faction-settlers","faction-rangers","faction-scribes","faction-raiders","faction-none"
+  );
+  pillWrap.classList.add("faction-" + state.faction);
+
+  // --- S.P.E.C.I.A.L. bars ---
+  const wrap = $("#special");
+  wrap.innerHTML = "";
+  SPECIAL_KEYS.forEach(k => {
+    const v = state.special[k];
+    const s = el("div", "stat");
+    const lbl = el("div","stat-label");
+    lbl.append(el("span", null,
+      k==="S"?"Strength":k==="P"?"Perception":k==="E"?"Endurance":
+      k==="C"?"Charisma":k==="I"?"Intelligence":k==="A"?"Agility":"Luck"
+    ));
+    lbl.append(el("span", null, v + "/10"));
+    const bar = el("div","bar" + (v<=3?" danger": v<=5?" warn":""));
+    const fill = el("i"); fill.style.width = (v*10) + "%";
+    bar.append(fill);
+    s.append(lbl, bar);
+    wrap.append(s);
+  });
+
+  // disable actions if pending choice or dead
+  const disable = !!state.pendingChoice || !state.alive;
+  ["#btn-age","#btn-explore","#btn-work","#btn-heal",
+   "#btn-relationships","#btn-inventory","#btn-join-faction","#btn-perks"]
+    .forEach(sel => { $(sel).disabled = disable; $(sel).style.opacity = disable? .6 : 1; });
+
+  // death checks
+  if (state.alive && (state.hp<=0 || state.rad>=100 || state.age>=120)) {
+    die();
+  }
+}
+
+
+function log(text, cls) {
+  const entry = el("div","entry"+(cls? " "+cls:""));
+  const p = el("p", null, text);
+  entry.append(p);
+  $("#log").prepend(entry);
+  state.log.push(text);
+}
+
+function info(text){ log(text,"muted") }
+
+function getJob(){ return JOBS.find(j=>j.id===state.job) || JOBS[0]; }
+function getFaction(){ return FACTIONS.find(f=>f.id===state.faction) || FACTIONS[0]; }
+
+/* ========= Mechanics (leveled combat power) ========= */
+function gainXP(n) {
+  state.xp += n;
+  while (state.xp >= needXP(state.level)) {
+    state.xp -= needXP(state.level);
+    state.level++;
+
+    // Core survivability bump each level
+    const hpGain = 6;                 // was +5
+    state.hpMax += hpGain;
+    state.hp = Math.min(state.hpMax, state.hp + Math.ceil(hpGain / 2));
+
+    // Combat power: SPECIAL growth (feeds into ATK/DEF/SPD/CRIT)
+    applyLevelBonuses(state.level);
+
+    log(`Level up! You are now level ${state.level}. Max HP +${hpGain}.`);
+  }
+}
+
+// Slightly steeper XP curve to pace the extra power
+function needXP(level){ return 50 + level * 30; }  // was 25/level
+
+function changeKarma(n){
+  state.karma = clamp(state.karma + n, -100, 100);
+}
+
+/* ---- Level-up helpers ---- */
+
+// Job-flavoured stat growth + milestone bumps.
+// Keeps numbers small, capped at 10, but makes you meaningfully stronger over time.
+function applyLevelBonuses(level){
+  const job = (getJob()?.id) || "none";
+
+  // Primary/secondary per job (affects playerBattleStats downstream)
+  const primary = job === "guard"  ? "S" :
+                  job === "scav"   ? "P" :
+                  job === "trader" ? "C" :
+                  job === "scribe" ? "I" :
+                  job === "med"    ? "I" : "A";
+
+  const secondary = job === "guard"  ? "E" :
+                    job === "scav"   ? "A" :
+                    job === "trader" ? "L" :
+                    job === "scribe" ? "P" :
+                    job === "med"    ? "P" : "S";
+
+  // Always +1 to your primary each level
+  bumpSPECIAL(primary, +1, `+1 ${fullName(primary)}`);
+
+  // Every 3 levels: +1 to your secondary
+  if (level % 3 === 0) bumpSPECIAL(secondary, +1, `+1 ${fullName(secondary)}`);
+
+  // Every 5 levels: +1 Luck (nudges crit & events)
+  if (level % 5 === 0) bumpSPECIAL("L", +1, "+1 Luck");
+
+  // Gentle pacing boost: every even level +1 Agility (helps SPD/flee)
+  if (level % 2 === 0) bumpSPECIAL("A", +1, "+1 Agility");
+}
+
+function bumpSPECIAL(k, delta, note){
+  if (!SPECIAL_KEYS.includes(k)) return;
+  const before = state.special[k];
+  state.special[k] = clamp(state.special[k] + delta, 1, 10);
+  if (state.special[k] !== before) {
+    info(`Level bonus: ${note}`);
+  }
+}
+
+function fullName(k){
+  return k==="S"?"Strength" :
+         k==="P"?"Perception" :
+         k==="E"?"Endurance" :
+         k==="C"?"Charisma" :
+         k==="I"?"Intelligence" :
+         k==="A"?"Agility" : "Luck";
+}
+
+
+  // ========= Yearly Event Pool =========
+  // NOTE: Events are chosen from this pool each year
+  // - Add new events into pool.push() based on age or faction
+
+function yearlyEvent() {
+  const a = state.age;
+  const pool = [];
+
+  // universal
+  pool.push(evt_findStash, evt_radStorm, evt_tradeOffer, evt_bandits, evt_sick, evt_helpStranger, evt_mysteriousStranger);
+
+  if (a <= 12) {
+    pool.push(evt_schoolyard, evt_vaultDrill);
+  } else if (a <= 18) {
+    pool.push(evt_sneakOut, evt_training, evt_firstJob);
+  } else {
+    pool.push(evt_workAccident, evt_factionScout, evt_repairOldTech);
+  }
+  // faction flavored
+  if (state.faction==="rangers") pool.push(evt_rangerPatrol);
+  if (state.faction==="scribes") pool.push(evt_lostArchive);
+  if (state.faction==="raiders") pool.push(evt_shakedown);
+
+  const e = sample(pool);
+  return e();
+}
+
+function setChoice(prompt, choices) {
+  state.pendingChoice = { prompt, choices };
+  renderChoice();
+  updateUI();
+}
+
+function renderChoice() {
+  const c = state.pendingChoice;
+  if (!c) return;
+
+  const entry = el("div","entry");
+  entry.append(el("p",null, c.prompt));
+  const box = el("div","choices");
+
+  c.choices.forEach(choice => {
+    const b = el("button","choice", choice.label);
+    b.onclick = () => {
+      // guard against double clicks
+      if (entry.dataset.resolved === "1") return;
+      entry.dataset.resolved = "1";
+      entry.classList.add("resolved");
+
+      // immediately disable all buttons in this choice block
+      box.querySelectorAll("button").forEach(btn => { btn.disabled = true; });
+
+      try { choice.run(); }
+      catch(e){ console.error(e); log("Something went wrong with that choice.","muted"); }
+
+      state.pendingChoice = null;
+      updateUI();
+    };
+    box.append(b);
+  });
+
+  entry.append(box);
+  $("#log").prepend(entry);
+}
+
+
+/* ========= Events ========= */
+function skillCheck(key, diff){
+  const roll = rnd(1,10) + (state.perks.includes("swift") && key==="A" ? 1 : 0);
+  const total = state.special[key] + roll;
+  return total >= diff;
+}
+
+function money(mult=1){
+  let base = rnd(5, 25);
+  if (state.perks.includes("silverTongue")) base = Math.round(base * 1.15);
+  if (state.perks.includes("scrounger")) base = Math.round(base * 1.25);
+  return Math.round(base * mult);
+}
+
+function damage(n){ state.hp = clamp(state.hp - n, 0, state.hpMax); }
+function heal(n){ state.hp = clamp(state.hp + n, 0, state.hpMax); }
+function rad(n){ state.rad = clamp(state.rad + n, 0, 100); }
+function derad(n){ state.rad = clamp(state.rad - n, 0, 100); }
+
+// NOTE: Each evt_* function defines one scenario with choices
+// - Add new events here
+// - Use setChoice() to present options
+
+function evt_findStash(){
+  const amt = money(1 + (state.special.L/20));
+  setChoice(
+    "You discover a hidden cache behind a cracked wall.",
+    [
+      { label:`Loot it (+${amt} caps, +XP)`, run:()=>{ state.caps+=amt; gainXP(12); log(`You pocket ${amt} caps and a few trinkets.`);} },
+      { label:"Leave it (Karma +3)", run:()=>{ changeKarma(+3); log("You leave it for someone in greater need."); gainXP(5);} }
+    ]
+  );
+}
+
+function evt_radStorm(){
+  setChoice("A radiation storm rolls over the wastes.", [
+    { label:"Find shelter (P+E check)", run:()=>{
+      if (skillCheck("P",12) && skillCheck("E",12)){ log("You hunker down safely. XP +10."); gainXP(10); }
+      else { log("You fail to find proper cover. RAD +12, HP -5."); rad(12); damage(5); }
+    }},
+    { label:"Push through (-HP, +XP)", run:()=>{ damage(10); rad(6); gainXP(15); log("You brave the storm and make progress."); } }
+  ]);
+}
+
+function evt_tradeOffer(){
+  const price = rnd(12,28);
+  setChoice("A caravan offers a water filter.", [
+    { label:`Buy (${price} caps)`, run:()=>{
+      if (state.caps>=price){ state.caps-=price; addItem("water_filter",1); log("You buy the filter. Hydration secured."); changeKarma(+1); }
+      else { log("Not enough caps."); }
+    }},
+    { label:"Haggle (C check)", run:()=>{
+      if (skillCheck("C", 12)){ const p = Math.max(4, price-8); log(`You talk them down to ${p} caps.`); state.caps = Math.max(0, state.caps - p); changeKarma(+1); }
+      else { log("Your haggling backfires. Price goes up 5 caps."); const p=price+5; if (state.caps>=p){ state.caps-=p; log("You begrudgingly pay."); } else log("You walk away."); }
+    }},
+    { label:"Pass", run:()=>{ log("You pass on the offer."); } }
+  ]);
+}
+
+function evt_bandits(){
+  setChoice("Bandits block your path and demand caps.", [
+    { label:"Fight (S+A check)", run:()=>{
+      const ok = skillCheck("S",12) && skillCheck("A",12);
+      if (ok){ log("You outmaneuver them. XP +20, caps +"+money(1.2)); state.caps+=money(1.2); gainXP(20); changeKarma(+1);}
+      else { log("They rough you up. HP -15, caps -10."); damage(15); state.caps=Math.max(0, state.caps-10); changeKarma(-1); }
+    }},
+    { label:"Flee (A check)", run:()=>{
+      const ok = skillCheck("A", 13 - (state.perks.includes("swift")?1:0));
+      if (ok){ log("You slip away into the ruins. XP +12."); gainXP(12); }
+      else { log("You stumble. HP -8, caps -6."); damage(8); state.caps=Math.max(0, state.caps-6); }
+    }},
+    { label:"Pay 12 caps", run:()=>{
+      const cost=12; if (state.caps>=cost){ state.caps-=cost; log("They let you pass."); changeKarma(-1);}
+      else log("You don't have enough. They laugh and shove you.");
+    }},
+  ]);
+}
+
+function evt_sick(){
+  setChoice("You fall ill after drinking questionable water.", [
+    { label:"Rest (-work this year, +HP)", run:()=>{ heal(8); log("You rest and recover a bit. XP +5."); gainXP(5); } },
+    { label:"Self-medicate (I check)", run:()=>{
+      if (skillCheck("I",12)){ heal(10); derad(5); log("You successfully treat yourself."); gainXP(10); }
+      else { damage(8); rad(6); log("Treatment goes poorly."); }
+    }},
+  ]);
+}
+
+function evt_helpStranger(){
+  setChoice("A wounded stranger begs for help.", [
+    { label:"Help (Karma +5, -time)", run:()=>{ changeKarma(+5); gainXP(10); heal(5); log("They thank you and hand you a trinket (+5 caps)."); state.caps+=5; } },
+    { label:"Ignore (Karma -5)", run:()=>{ changeKarma(-5); log("You move on."); } }
+  ]);
+}
+
+function evt_mysteriousStranger(){
+  if (rnd(1,100) <= (5 + state.special.L)) {
+    const amt = money(2.0);
+    setChoice("A mysterious figure nods and vanishes.", [
+      { label:`Check your pocket (+${amt} caps)`, run:()=>{ state.caps+=amt; log("A note reads: “Make your own luck.”"); } }
+    ]);
+  } else {
+    return evt_findStash();
+  }
+}
+
+function evt_schoolyard(){
+  setChoice("At the settlement school, a radroach skitters by.", [
+    { label:"Stomp it (S check)", run:()=>{ if (skillCheck("S",10)){ gainXP(6); log("Splat. The class cheers."); } else { damage(2); log("It nips you. Ouch."); } } },
+    { label:"Observe (I +1)", run:()=>{ state.special.I = clamp(state.special.I+1,1,10); gainXP(4); log("You study its behavior. +1 INT."); } },
+    { label:"Run (A +1)", run:()=>{ state.special.A = clamp(state.special.A+1,1,10); log("You’re quick on your feet. +1 AGI."); } },
+  ]);
+}
+
+function evt_vaultDrill(){
+  setChoice("Vault safety drill time.", [
+    { label:"Lead classmates (C +1)", run:()=>{ state.special.C = clamp(state.special.C+1,1,10); log("You take charge. +1 CHA."); } },
+    { label:"Carry supplies (S +1)", run:()=>{ state.special.S = clamp(state.special.S+1,1,10); log("Heavy lifting builds muscle. +1 STR."); } },
+  ]);
+}
+
+function evt_sneakOut(){
+  setChoice("Friends want to sneak out after curfew.", [
+    { label:"Go (A check)", run:()=>{ if (skillCheck("A",12)){ gainXP(8); log("You make it back unseen."); } else { damage(6); log("You trip over debris and get scraped."); } } },
+    { label:"Decline (Karma +2)", run:()=>{ changeKarma(+2); log("You decide against it."); } },
+  ]);
+}
+
+function evt_training(){
+  setChoice("A mentor offers combat drills.", [
+    { label:"Train (S +1 or A +1)", run:()=>{ if (Math.random()<.5) { state.special.S=clamp(state.special.S+1,1,10); log("+1 STR."); } else { state.special.A=clamp(state.special.A+1,1,10); log("+1 AGI."); } gainXP(10); } },
+    { label:"Study tactics (I +1)", run:()=>{ state.special.I=clamp(state.special.I+1,1,10); gainXP(8); log("+1 INT."); } },
+  ]);
+}
+
+function evt_firstJob(){
+  if (state.age>=14 && state.job==="none"){
+    setChoice("You’re old enough to work. Pick a path?", [
+      ...JOBS.filter(j=>j.id!=="none" && j.minAge<=state.age && j.req(state.special))
+        .map(j=>({label:j.name, run:()=>{ state.job = j.id; log(`You start as a ${j.name}.`); gainXP(10);} })),
+      {label:"Not now", run:()=>{ log("You put it off."); }}
+    ]);
+  } else {
+    return evt_training();
+  }
+}
+
+function evt_workAccident(){
+  setChoice("A workplace mishap occurs.", [
+    { label:"React fast (A check)", run:()=>{ if (skillCheck("A",12)){ log("You prevent injury. XP +10."); gainXP(10);} else { damage(10); log("You get hurt. HP -10."); } } },
+    { label:"Shield others (Karma +3)", run:()=>{ changeKarma(+3); damage(6); gainXP(8); log("You protect coworkers."); } }
+  ]);
+}
+
+function evt_factionScout(){
+  if (state.faction==="none"){
+    setChoice("A faction scout sizes you up.", [
+      { label:"Hear them out", run:()=>{ openJoinFaction(); } },
+      { label:"Ignore", run:()=>{ log("Maybe another time."); } }
+    ]);
+  } else {
+    return evt_repairOldTech();
+  }
+}
+
+function evt_repairOldTech(){
+  setChoice("You find a busted pre-war device.", [
+    { label:"Tinker (I check)", run:()=>{ if (skillCheck("I",13)){ gainXP(16); state.caps+=money(1.3); log("It whirs to life. You sell parts for caps."); } else { damage(4); log("It sparks and bites you."); } } },
+    { label:"Salvage (+caps, +RAD)", run:()=>{ state.caps+=money(1.1); rad(6); log("Profitable, but dirty work."); } },
+  ]);
+}
+
+function evt_rangerPatrol(){
+  setChoice("On patrol, you spot movement.", [
+    { label:"Investigate (P check)", run:()=>{ if (skillCheck("P",12)){ gainXP(12); log("It’s a harmless critter. All clear."); } else { damage(6); log("Ambush! You’re grazed."); } } },
+    { label:"Radio in (+Karma)", run:()=>{ changeKarma(+2); gainXP(8); log("Teamwork keeps people safe."); } }
+  ]);
+}
+
+function evt_lostArchive(){
+  setChoice("A rumor about a hidden archive spreads among Scribes.", [
+    { label:"Research (I +1)", run:()=>{ state.special.I=clamp(state.special.I+1,1,10); gainXP(14); log("Clues emerge. +1 INT."); } },
+    { label:"Field search (E check)", run:()=>{ if (skillCheck("E",12)){ gainXP(16); addItem("holotape",1); log("You recover an old holotape."); } else { rad(8); log("The trail leads through hot zones. RAD +8."); } } },
+  ]);
+}
+
+function evt_shakedown(){
+  setChoice("Your crew eyes a shakedown opportunity.", [
+    { label:"Intimidate (C check)", run:()=>{ 
+        if (skillCheck("C",12)){ state.caps+=money(1.4); changeKarma(-5); log("You score loot, but word spreads. Karma -5."); } 
+        else { log("They weren’t impressed. Awkward."); } 
+      } 
+    },
+    { label:"Pass (Karma +2)", run:()=>{ changeKarma(+2); log("You keep the peace—for now."); } }
+  ]);
+} // <-- this closing brace was missing
+
+// One-click actions for each faction (shown in the Faction menu after you join)
+// ========= Faction Actions =========
+// NOTE: Each faction has repeatable actions here
+// - Add new actions inside settlers/rangers/scribes/raiders arrays
+// - Use changeRep() and changeKarma() for outcomes
+
+const FACTION_ACTIONS = {
+  settlers: [
+    {
+      label: "Escort a trade caravan",
+      run: () => {
+        // 30% chance the escort turns into a fight (wastes-tier enemy)
+        if (maybeStartCombat(0.30, "wastes", "faction")) return;
+
+        const ambush = rnd(1,100) < 35;
+        const pay = money(1.1) + 5;
+        state.caps += pay;
+        changeRep(+3);
+        changeKarma(+1);
+        gainXP(10);
+        log(`You escort a caravan. +${pay} caps, +rep, +karma.`);
+        if (ambush) {
+          if (skillCheck("A",12)) {
+            log("Bandit ambush avoided.");
+            gainXP(6);
+          } else {
+            damage(6);
+            log("Ambushed on the road. HP -6.");
+          }
+        }
+      }
+    },
+    {
+      label: "Help build defenses (cost 8 caps)",
+      run: () => {
+         // Small chance a raider scout pokes the line
+        if (maybeStartCombat(0.15, "raiders", "faction")) return;
+        if (state.caps < 8) { log("Not enough caps for materials."); return; }
+        state.caps -= 8;
+        changeRep(+4);
+        gainXP(12);
+        log("You reinforce palisades and set traps. +rep, +XP.");
+      }
+    },
+    {
+      label: "Work the fields",
+      run: () => {
+           // Vermin encounter, low chance
+        if (maybeStartCombat(0.12, "wastes", "faction")) return;
+        const harvest = rnd(2,5);
+        state.caps += harvest;
+        changeRep(+2);
+        changeKarma(+1);
+        gainXP(8);
+        log(`You toil in the fields. Earned ${harvest} caps, gained trust and karma.`);
+      }
+    },
+    {
+      label: "Teach survival skills",
+      run: () => {
+        changeRep(+3);
+        changeKarma(+2);
+        gainXP(15);
+        log("You show settlers how to purify water and forage safely. +rep, +karma, +XP.");
+      }
+    }
+  ],
+
+  rangers: [
+    {
+      label: "Perimeter patrol",
+      run: () => {
+         // Patrols should fight sometimes
+        if (maybeStartCombat(0.25, "rangers", "faction")) return;
+        if (skillCheck("P",12)) {
+          gainXP(12);
+          changeRep(+3);
+          log("Quiet patrol. You spot tracks and report in. +rep, +XP.");
+        } else {
+          damage(4);
+          gainXP(8);
+          log("You spring a snare. HP -4, +XP.");
+        }
+      }
+    },
+    {
+      label: "Track raiders",
+      run: () => {
+          // High chance of raider combat
+        if (maybeStartCombat(0.50, "raiders", "faction")) return;
+        const tough = !skillCheck("A",13) || !skillCheck("S",12);
+        if (tough) {
+          damage(10);
+          log("Skirmish turns nasty. HP -10.");
+        } else {
+          const bounty = money(1.3);
+          state.caps += bounty;
+          changeRep(+5);
+          gainXP(16);
+          log(`Successful interdiction. +${bounty} caps, +rep, +XP.`);
+        }
+      }
+    },
+    {
+      label: "Scout dangerous territory",
+      run: () => {
+         // Chance of hostile wildlife
+        if (maybeStartCombat(0.30, "wastes", "faction")) return;
+        const find = rnd(1,100) < 40;
+        if (find) {
+          const loot = money(1.0) + 3;
+          state.caps += loot;
+          gainXP(10);
+          changeRep(+2);
+          log(`You map new ground and recover salvage. +${loot} caps, +rep, +XP.`);
+        } else {
+          damage(5);
+          gainXP(6);
+          log("You blunder into a mutant nest. HP -5, +XP.");
+        }
+      }
+    },
+    {
+      label: "Train recruits",
+      run: () => {
+        changeRep(+4);
+        gainXP(14);
+        log("You drill fresh recruits in marksmanship and survival. +rep, +XP.");
+      }
+    }
+  ],
+
+  scribes: [
+    {
+      label: "Research pre-war schematics",
+      run: () => {
+        if (skillCheck("I",12)) {
+          gainXP(16);
+          changeRep(+3);
+          log("Breakthrough! +rep, +XP.");
+        } else {
+          log("You hit a dead end in the archives.");
+        }
+      }
+    },
+    {
+      label: "Field retrieval (hot zone)",
+      run: () => {
+         // Retrievals can pull a fight (ghouls/vermin)
+        if (maybeStartCombat(0.35, "wastes", "faction")) return;
+        if (skillCheck("E",12)) {
+          addItem("holotape",1);
+          gainXP(14);
+          changeRep(+4);
+          log("Recovered an intact holotape. +rep, +XP.");
+        } else {
+          rad(8);
+          log("Radiation pockets slow you. RAD +8.");
+        }
+      }
+    },
+    {
+      label: "Repair salvaged tech",
+      run: () => {
+        if (skillCheck("I",13)) {
+          const reward = money(1.2) + 4;
+          state.caps += reward;
+          gainXP(12);
+          changeRep(+2);
+          log(`You restore a working device. +${reward} caps, +rep, +XP.`);
+        } else {
+          log("Your repair attempt fails — components fried.");
+        }
+      }
+    },
+    {
+      label: "Teach wastelanders literacy",
+      run: () => {
+        gainXP(10);
+        changeRep(+5);
+        changeKarma(+2);
+        log("You hold lessons in reading and history. +rep, +karma, +XP.");
+      }
+    }
+  ],
+
+  raiders: [
+    {
+      label: "Shakedown a toll post",
+      run: () => {
+          // Sometimes enforcers show up to stop you
+        if (maybeStartCombat(0.25, "rangers", "faction")) return;
+        const haul = money(1.4);
+        state.caps += haul;
+        changeRep(+4);
+        changeKarma(-6);
+        log(`Your cut from the tolls: +${haul} caps. Karma -6, +rep.`);
+      }
+    },
+    {
+      label: "Raid a convoy",
+      run: () => {
+          // Often becomes a battle
+        if (maybeStartCombat(0.60, "raiders", "faction")) return;
+        const fail = !skillCheck("S",12) || !skillCheck("A",12);
+        if (fail) {
+          damage(12);
+          log("The guards were ready. HP -12.");
+          changeRep(-1);
+        } else {
+          const loot = money(1.8);
+          state.caps += loot;
+          gainXP(16);
+          changeRep(+6);
+          changeKarma(-8);
+          log(`Convoy cracked. +${loot} caps, +rep, Karma -8, +XP.`);
+        }
+      }
+    },
+    {
+      label: "Extort a settlement",
+      run: () => {
+         // Sometimes defenders push back
+        if (maybeStartCombat(0.30, "settlers", "faction")) return;
+        const payout = money(1.2) + 8;
+        state.caps += payout;
+        changeRep(+5);
+        changeKarma(-10);
+        gainXP(12);
+        log(`The settlers pay up. +${payout} caps, +rep, Karma -10, +XP.`);
+      }
+    },
+    {
+      label: "Pit fight",
+      run: () => {
+          // Rarely, a rival champion steps in (treated as raiders tier)
+        if (maybeStartCombat(0.20, "raiders", "faction")) return;
+        const win = skillCheck("S",13) || skillCheck("A",13);
+        if (win) {
+          const prize = money(1.5) + 5;
+          state.caps += prize;
+          changeRep(+3);
+          gainXP(14);
+          changeKarma(-4);
+          log(`You win the brawl. +${prize} caps, +rep, Karma -4, +XP.`);
+        } else {
+          damage(10);
+          log("You get beaten bloody in the pit. HP -10.");
+        }
+      }
+    }
+  ]
+}; // <-- end FACTION_ACTIONS
+
+
+// ── Faction Ranks ───────────────────────────────
+const FACTION_RANKS = [
+  { min: 0,  name: "Outsider" },
+  { min: 20, name: "Associate" },
+  { min: 50, name: "Member" },
+  { min: 80, name: "Trusted" },
+  { min: 100,name: "Champion" }
+];
+
+function factionRank(rep){
+  let r = "Outsider";
+  for (const tier of FACTION_RANKS){
+    if (rep >= tier.min) r = tier.name;
+  }
+  return r;
+}
+
+
+  // NOTE: Right now factionRep is a single number
+  // To implement tiers: check thresholds here and log tier-up messages
+function changeRep(n){
+  if (typeof state.factionRep !== "number") state.factionRep = 0;
+  state.factionRep = clamp(state.factionRep + n, -100, 100);
+}
+
+
+
+
+
+/* ========= Actions ========= */
+// NOTE: Core buttons (Age Up, Explore, Work, Heal)
+// - Add new player action functions here
+
+function ageUp(){
+  if (!state.alive) return;
+  state.age += 1; state.year += 1;
+
+  // yearly upkeep: job pay; hunger/rad decay
+  const job = getJob();
+  if (job.id!=="none"){
+    let pay = (typeof job.base === "number" ? job.base : job.base()) + Math.round(state.special.C * 1.5);
+    if (state.perks.includes("silverTongue")) pay = Math.round(pay*1.15);
+    state.caps += pay;
+    log(`Your ${job.name} income: +${pay} caps.`);
+  }
+  derad(3);
+  heal(3);
+
+  // birthday note
+  log(`You turned ${state.age}.`, "muted");
+
+  yearlyEvent();
+  gainXP(10);
+}
+
+function openRelationships(){
+  // --- UI state (persist across opens) ---
+  if (state._relSort == null) state._relSort = "bond";     // "bond" | "name"
+  if (state._relFilter == null) state._relFilter = "all";   // "all" | "partners"
+
+  // Backfill old saves: ensure fields exist
+  state.relationships.forEach(r=>{
+    if (typeof r.bond !== "number") r.bond = rnd(30,70);
+    if (typeof r.romance !== "boolean") r.romance = false;
+    if (!r.id) r.id = crypto.randomUUID();
+    if (!r.name) r.name = "Wastelander " + rnd(100,999);
+    // per-year favor cooldown (optional)
+    if (typeof r.lastFavorYear !== "number") r.lastFavorYear = 0;
+  });
+
+  const m = openModal("Relationships");
+
+  // Header stats
+  const avg = Math.round(
+    (state.relationships.reduce((a,r)=>a+r.bond,0) / Math.max(1, state.relationships.length))
+  );
+  const head = el("div","kv");
+  head.append(el("div", null, "Overview"));
+  head.append(el("div", "small muted", `People: ${state.relationships.length} • Avg bond: ${isFinite(avg)?avg:0}`));
+  m.content.append(head, el("div","hr"));
+
+  // Controls (sort + filter)
+  const ctrl = el("div","kv");
+  ctrl.append(el("div", null, "Sort / Filter"));
+
+  const ctrlBox = el("div");
+  const sortBond = el("button","choice", state._relSort==="bond" ? "Sort: Bond ✓" : "Sort: Bond");
+  const sortName = el("button","choice", state._relSort==="name" ? "Sort: Name ✓" : "Sort: Name");
+  const filterAll = el("button","choice", state._relFilter==="all" ? "Show: All ✓" : "Show: All");
+  const filterPartners = el("button","choice", state._relFilter==="partners" ? "Show: Partners ✓" : "Show: Partners");
+
+  sortBond.onclick = ()=>{ state._relSort="bond"; openRelationships(); };
+  sortName.onclick = ()=>{ state._relSort="name"; openRelationships(); };
+  filterAll.onclick = ()=>{ state._relFilter="all"; openRelationships(); };
+  filterPartners.onclick = ()=>{ state._relFilter="partners"; openRelationships(); };
+
+  ctrlBox.append(sortBond, sortName, filterAll, filterPartners);
+  ctrl.append(ctrlBox);
+  m.content.append(ctrl, el("div","hr"));
+
+  // Apply sort + filter
+  let rows = [...state.relationships];
+  if (state._relFilter === "partners") rows = rows.filter(r=>r.romance);
+  if (state._relSort === "name") rows.sort((a,b)=>a.name.localeCompare(b.name));
+  else rows.sort((a,b)=>b.bond - a.bond);
+
+  if (!rows.length){
+    m.content.append(el("p","muted","(no matches)"));
+    return;
+  }
+
+  // Helper: bond bar element
+  const bondBar = (val)=>{
+    const outer = el("div","bar" + (val<=30?" danger": val<=60?" warn":""));
+    const fill = el("i"); fill.style.width = clamp(val,0,100) + "%";
+    outer.append(fill);
+    return outer;
+  };
+
+  // Per-person rows
+  rows.forEach(r=>{
+    const row = el("div","kv");
+    row.append(el("div", null, r.name + (r.romance ? " ♥" : "")));
+
+    const actions = el("div");
+
+    // Bond label + bar
+    const bondWrap = el("div");
+    bondWrap.append(el("div","small muted", `bond ${r.bond}`));
+    bondWrap.append(bondBar(r.bond));
+    actions.append(bondWrap);
+
+    // Talk
+    const talk = el("button","choice"); 
+    talk.textContent = "Talk (+bond)";
+    talk.onclick = () => { 
+      const d = rnd(2,8) + (state.special.C>=6 ? 2 : 0);
+      r.bond = clamp(r.bond + d, 0, 100); 
+      log(`You talk with ${r.name}. Bond +${d}.`); 
+      updateUI(); 
+      openRelationships(); 
+    };
+    actions.append(talk);
+
+    // Gift
+    const gift = el("button","choice"); 
+    gift.textContent = "Gift (-6 caps, ++bond)";
+    gift.onclick = () => { 
+      if (state.caps >= 6){ 
+        state.caps -= 6; 
+        const d = rnd(6,16); 
+        r.bond = clamp(r.bond + d, 0, 100); 
+        log(`Gift for ${r.name}. Bond +${d}.`); 
+        updateUI(); 
+        openRelationships(); 
+      } else { 
+        log("Not enough caps for a gift."); 
+      } 
+    };
+    actions.append(gift);
+
+    // Hang Out (no caps cost, modest bond & tiny heal/xp)
+    const hang = el("button","choice");
+    hang.textContent = "Hang out (+bond, +tiny heal)";
+    hang.onclick = () => {
+      const d = rnd(3,9);
+      r.bond = clamp(r.bond + d, 0, 100);
+      heal(2);
+      gainXP(4);
+      log(`You spend time with ${r.name}. Bond +${d}. You feel a bit better (+HP).`);
+      updateUI();
+      openRelationships();
+    };
+    actions.append(hang);
+
+    // Flirt / Commit
+    const romance = el("button","choice"); 
+    romance.textContent = r.romance ? "Stay committed" : "Flirt / Commit";
+    romance.onclick = () => { 
+      if (state.age < 16){ log("Too young for romance."); return; }
+      if (r.romance){
+        log(`You reaffirm things with ${r.name}.`);
+        r.bond = clamp(r.bond + 2, 0, 100);
+      } else {
+        // CHA-leaning check
+        const ok = skillCheck("C", 11);
+        if (r.bond >= 55 && ok){
+          r.romance = true; 
+          r.bond = clamp(r.bond + 8, 0, 100);
+          log(`You and ${r.name} become partners!`);
+        } else {
+          r.bond = clamp(r.bond - 3, 0, 100);
+          log(`${r.name} hesitates. Maybe build more trust. (Bond -3)`);
+        }
+      }
+      updateUI(); 
+      openRelationships(); 
+    };
+    actions.append(romance);
+
+    // Ask a Favor (once per year each person) – small, situational perks
+    const canFavor = r.bond >= 60 && r.lastFavorYear !== state.year;
+    const favor = el("button","choice", canFavor ? "Ask a favor" : "Favor (unavailable)");
+    favor.disabled = !canFavor;
+    favor.onclick = () => {
+      r.lastFavorYear = state.year;
+      // quick randomized favors
+      const t = rnd(1,4);
+      if (t===1){ const c = rnd(6,14); state.caps += c; log(`${r.name} lends a hand with barter. +${c} caps.`); }
+      else if (t===2){ heal(6); log(`${r.name} patches you up. HP +6.`); }
+      else if (t===3){ addItem("junk",1); log(`${r.name} shares some scrap. +1 Junk.`); }
+      else { gainXP(8); log(`${r.name} trains with you. XP +8.`); }
+      updateUI(); openRelationships();
+    };
+    actions.append(favor);
+
+    // Break up (if partnered)
+    if (r.romance){
+      const breakBtn = el("button","choice");
+      breakBtn.textContent = "Break up";
+      breakBtn.onclick = () => {
+        r.romance = false;
+        r.bond = clamp(r.bond - rnd(8,15), 0, 100);
+        log(`You and ${r.name} part ways.`);
+        updateUI(); openRelationships();
+      };
+      actions.append(breakBtn);
+    }
+
+    m.content.append(row, actions, el("div","hr"));
+  });
+}
+
+function work(){
+  if (!state.alive) return;
+  const job = getJob();
+  // Sometimes your shift gets spicy
+  if (maybeStartCombat(0.15, "work", "work")) { return; }
+  if (job.id === "none"){
+    log("You have no steady work. Try scavenging.");
+    explore();               // fallback to explore if jobless
+    return;
+  }
+  const prod = rnd(0,100) + state.special.E + (state.perks.includes("silverTongue") ? 5 : 0);
+  if (prod > 90){
+    const tip = money(0.9);
+    state.caps += tip;
+    log(`Great shift as ${job.name}. Tips +${tip} caps. XP +10.`);
+    gainXP(10);
+  } else if (prod > 50){
+    log(`Uneventful shift. XP +6.`);
+    gainXP(6);
+  } else {
+    log(`Rough shift. Small accident: HP -4.`);
+    damage(4);
+  }
+}
+
+function healAction(){
+  if (!state.alive) return;
+  const cost = 12;
+  if (state.caps < cost){
+    log("Not enough caps for supplies. You improvise. HP +3, RAD -1.");
+    heal(3); derad(1);
+    return;
+  }
+  state.caps -= cost;
+  let h = 15, r = 8;
+  if (state.perks.includes("medic")){ h += 5; r += 4; }
+  heal(h); derad(r);
+  log(`You patch up and detox. HP +${h}, RAD -${r}.`);
+}
+
+
+function explore(){
+  if (!state.alive) return;
+  // 35% chance to get a combat encounter while exploring
+  if (maybeStartCombat(0.35, "wastes", "explore")) { return; }
+
+
+  const roll = rnd(1,100) + state.special.L;
+
+  // rare weapon find
+  if (roll > 98){
+    addItem("knife", 1);
+    log("Jackpot! You find a serviceable combat knife.");
+    gainXP(12);
+  }
+  // uncommon duct tape find
+  else if (roll > 92){
+    addItem("duct_tape", 1);
+    log("Score! You salvage a roll of duct tape.");
+    gainXP(8);
+  }
+  // common junk find
+  else if (roll > 75){
+    const n = rnd(1,3);                 // <-- FIX: need min & max
+    addItem("junk", n);
+    log(`You scavenge useful junk. +${n} junk.`);
+    gainXP(6);
+  }
+  // barter scrap for caps (no items)
+  else if (roll > 55){
+    const amt = money(0.8);
+    state.caps += amt;
+    log(`You find scrap and barter it. +${amt} caps.`);
+    gainXP(6);
+  }
+  else if (roll > 35){
+    log("Quiet day. You map some ruins. XP +6.");
+    gainXP(6);
+  }
+  else if (roll > 20){
+    rad(5);
+    log("Irradiated puddles slow you. RAD +5.");
+  }
+  else {
+    damage(10);
+    log("Wild dogs attack. HP -10.");
+  }
+}
+
+
+function openInventory(){
+  migrateInventoryShape();
+  const m = openModal("Inventory");
+
+  // ── Equipment panel ───────────────────────────────────────────────
+  const eqTitle = el("div","title"); 
+  eqTitle.textContent = "Equipment";
+  m.content.append(eqTitle);
+
+  // Show total bonuses from equipped gear
+  const { atk=0, def=0 } = calcStats();
+  const statRow = el("div","kv");
+  statRow.append(el("div", null, "Bonuses"));
+  statRow.append(el("div", "small", `ATK +${atk} / DEF +${def}`));
+  m.content.append(statRow, el("div","hr"));
+
+  // Per-slot rows
+  ["head","chest","legs","weapon"].forEach(slot=>{
+    const row = el("div","kv");
+    const label = slot[0].toUpperCase() + slot.slice(1);
+    row.append(el("div", null, label));
+
+    const d = el("div");
+    const id = state.equipment[slot];
+    if (id){
+      const meta = ITEMS[id] || { name:id };
+      d.append(el("div", null, meta.name || id));
+      if (meta.desc) d.append(el("div","small muted", meta.desc));
+
+      const u = el("button","choice");
+      u.textContent = "Unequip";
+      u.onclick = ()=>{ unequip(slot); openInventory(); };
+      d.append(u);
+    } else {
+      d.append(el("div","small muted","(empty)"));
+    }
+
+    m.content.append(row, d, el("div","hr"));
+  });
+
+  // ── Inventory list ────────────────────────────────────────────────
+  const invTitle = el("div","title"); 
+  invTitle.textContent = "Inventory";
+  m.content.append(invTitle);
+
+  if (!inv().length){
+    m.content.append(el("p","muted","(empty)"));
+  } else {
+    inv().forEach(s => {
+      const meta = ITEMS[s.id] || { name: s.id };
+      const row = el("div","kv");
+      row.append(el("div", null, `${meta.name || s.id} ×${s.qty}`));
+      const actions = el("div");
+
+      if (meta.desc) actions.append(el("div","small muted", meta.desc));
+
+      // Use (if usable)
+      if (meta.use){
+        const b = el("button","choice","Use");
+        b.onclick = () => { useItem(s.id); openInventory(); };
+        actions.append(b);
+      }
+
+      // Equip (if equippable)
+      if (meta.slot){
+        const eqBtn = el("button","choice","Equip");
+        eqBtn.onclick = () => { equipItem(s.id); openInventory(); };
+        actions.append(eqBtn);
+      }
+
+      // Simple sell example
+      if (s.id === "holotape"){
+        const sell = el("button","choice","Sell (20 caps)");
+        sell.onclick = () => {
+          removeItem("holotape",1);
+          state.caps += 20;
+          log("Sold an Ancient Holotape for 20 caps.");
+          updateUI();
+          openInventory();
+        };
+        actions.append(sell);
+      }
+
+      // Drop
+      const drop = el("button","choice","Drop");
+      drop.onclick = () => { removeItem(s.id,1); log(`Dropped 1 ${meta.name || s.id}.`); updateUI(); openInventory(); };
+      actions.append(drop);
+
+      m.content.append(row, actions, el("div","hr"));
+    });
+  }
+
+  // ── Crafting section ──────────────────────────────────────────────
+  const craftTitle = el("div","title"); 
+  craftTitle.textContent = "Crafting";
+  m.content.append(craftTitle);
+
+  let any = false;
+  RECIPES.forEach(r => {
+    const can = hasItems(r.requires);
+    const row = el("div","kv");
+    row.append(el("div", null, r.name));
+    const d = el("div");
+    d.append(el("div","small muted", r.desc));
+    const b = el("button","choice"); 
+    b.textContent = can ? "Craft" : "Missing reqs";
+    b.disabled = !can;
+    b.onclick = () => { craft(r.id); openInventory(); };
+    d.append(b);
+    m.content.append(row, d, el("div","hr"));
+    any = true;
+  });
+
+  if (!any) m.content.append(el("p","muted","No recipes known."));
+}
+
+
+
+// ========= Faction Menu =========
+// If no faction → list joinable ones.
+// If in a faction → show actions, reputation, rank (and allow leaving).
+function openJoinFaction(){
+  // Not in a faction yet: show join list
+  if (state.faction === "none") {
+    const m = openModal("Factions");
+    const canJoin = FACTIONS.filter(f => f.id !== "none" && f.req(state.special));
+    if (!canJoin.length){
+      m.content.append(el("p", null, "No one’s recruiting you right now. Train up!"));
+      return;
+    }
+    canJoin.forEach(f => {
+      const row = el("div", "kv");
+      row.append(el("div", null, f.name));
+      const d = el("div");
+      d.append(el("div","small muted", f.blurb));
+      const b = el("button","choice","Join");
+      b.onclick = () => {
+        state.faction = f.id;
+        state.factionRep = 0;
+        log(`You joined ${f.name}.`);
+        updateUI();
+        closeModal();
+      };
+      d.append(b);
+      m.content.append(row, d, el("div","hr"));
+    });
+    return;
+  }
+
+  // Already in a faction: show personalized actions
+  const f = getFaction();
+  const m = openModal(`${f.name}`);
+
+  // ── Header block
+  const header = el("div","faction-header " + f.id);
+  header.innerHTML = `
+    <div class="title">${f.name}</div>
+    <div class="small muted">${f.blurb}</div>
+  `;
+  m.content.append(header);
+
+  // ── Reputation bar + rank
+  const infoRow = el("div","kv");
+  infoRow.append(el("div", null, "Reputation"));
+  const bar = el("div","rep-bar");
+  const fill = el("i");
+  fill.style.width = clamp(state.factionRep, 0, 100) + "%";
+  bar.append(fill);
+  infoRow.append(bar);
+  m.content.append(infoRow);
+
+  const rankRow = el("div","kv");
+  rankRow.append(el("div", null, "Rank"));
+  rankRow.append(el("div","small muted", factionRank(state.factionRep)));
+  m.content.append(rankRow, el("div","hr"));
+
+  // ── Actions
+  const actions = FACTION_ACTIONS[state.faction] || [];
+  if (!actions.length) {
+    m.content.append(el("p","muted","No special actions available right now."));
+  } else {
+    actions.forEach(a => {
+      const box = el("div","faction-action");
+      box.append(el("div","label", a.label));
+      const b = el("button","choice","Do it");
+      b.onclick = () => {
+        try { a.run(); } catch(e){ console.error(e); log("Action failed.","muted"); }
+        updateUI();
+        closeModal();
+      };
+      box.append(b);
+      m.content.append(box);
+    });
+  }
+
+  // ── Leave faction (danger zone) at bottom
+  m.content.append(el("div","hr"));
+  const leaveRow = el("div","kv");
+  leaveRow.append(el("div", null, "Leave faction"));
+  const leaveBox = el("div");
+  const leaveBtn = el("button","choice dangerous","Leave");
+  leaveBtn.onclick = () => {
+    const name = f.name;
+    if (confirm(`Leave ${name}? You’ll lose your reputation with them.`)) {
+      state.faction = "none";
+      state.factionRep = 0;
+      log(`You left ${name}.`);
+      updateUI();     // updates pill and changes sidebar text to "Join a Faction"
+      closeModal();
+    }
+  };
+  leaveBox.append(leaveBtn);
+  leaveRow.append(leaveBox);
+  m.content.append(leaveRow);
+}
+
+
+
+
+
+ // ========= Perks Menu =========
+  // NOTE: Unlock perks here
+  // Add new perks in PERKS array above
+
+function openPerks(){
+  const m = openModal("Perks");
+  const owned = el("p","small muted","Owned: "+(state.perks.map(p=>PERKS.find(x=>x.id===p)?.name).filter(Boolean).join(", ") || "none"));
+  m.content.append(owned, el("div","hr"));
+  PERKS.forEach(p=>{
+    const ok = p.req(state);
+    const row = el("div","kv");
+    row.append(el("div",null,p.name));
+    const d = el("div");
+    d.append(el("div","small muted", p.desc));
+    const b = el("button","choice"); b.textContent = state.perks.includes(p.id) ? "Owned" : (ok ? "Unlock (1 perk point)" : "Locked");
+    b.disabled = state.perks.includes(p.id) || !ok || (perkPoints()<=0);
+    b.onclick=()=>{ if (perkPoints()>0){ state.perks.push(p.id); log(`Perk unlocked: ${p.name}.`); updateUI(); openPerks(); } };
+    d.append(b);
+    m.content.append(row,d,el("div","hr"));
+  });
+  const footer = el("p","small muted", `Perk Points: ${perkPoints()}`);
+  m.content.append(footer);
+}
+
+function perkPoints(){ return Math.floor(state.level/3) - state.perks.length; }
+
+/* ========= Modal ========= */
+function openModal(title){
+  $("#modal-title").textContent = title;
+  $("#modal-content").innerHTML = "";
+  $("#modal-backdrop").style.display = "grid";
+  return { content: $("#modal-content") };
+}
+function closeModal(){ $("#modal-backdrop").style.display="none"; }
+$("#modal-close").onclick = closeModal;
+$("#modal-backdrop").addEventListener("click", e=>{
+  if (e.target.id==="modal-backdrop") closeModal();
+});
+
+/* ========= Turn-Based Combat ========= */
+// openCombat(enemy, { source })
+function openCombat(enemy, ctx={}) {
+  const m = openModal("Encounter");
+  let turn = 1;
+  let logBox, enemyHPFill, playerHPFill;
+
+  // Snapshot player battle stats each round (speed can shift with status later if you add it)
+  const pstats = () => playerBattleStats();
+  const enemyStats = { atk: enemy.atk, def: enemy.def, spd: enemy.spd };
+
+  // Build UI
+  const hud = el("div", "kv");
+  hud.append(el("div", null, "Enemy"));
+  hud.append(el("div", "small", `${enemy.name} (Lv ?)`));
+  m.content.append(hud);
+
+  // Enemy bar
+  const eRow = el("div","kv");
+  eRow.append(el("div", null, enemy.name));
+  const eBar = el("div","bar"); enemyHPFill = el("i"); eBar.append(enemyHPFill);
+  eRow.append(eBar);
+  m.content.append(eRow);
+
+  // Player bar
+  const pRow = el("div","kv");
+  pRow.append(el("div", null, state.name));
+  const pBar = el("div","bar"); playerHPFill = el("i"); pBar.append(playerHPFill);
+  pRow.append(pBar);
+  m.content.append(pRow, el("div","hr"));
+
+  // Log
+  logBox = el("div");
+  m.content.append(logBox);
+
+  // Actions
+  const actionRow = el("div","kv");
+  actionRow.append(el("div", null, "Actions"));
+  const buttonsBox = el("div");
+  const btnAttack = el("button","choice","Attack");
+  const btnItem   = el("button","choice","Item");
+  const btnFlee   = el("button","choice","Flee");
+  buttonsBox.append(btnAttack, btnItem, btnFlee);
+  actionRow.append(buttonsBox);
+  m.content.append(actionRow);
+
+  // Item submenu (inline)
+  const itemBox = el("div");
+  m.content.append(itemBox);
+
+  function uiLog(t){ const p = el("p", null, t); logBox.append(p); logBox.scrollTop = logBox.scrollHeight; }
+  function refreshBars(){
+    // enemy
+    const ePct = Math.max(0, Math.round((enemy.curHP / enemy.hp) * 100));
+    enemyHPFill.style.width = ePct + "%";
+    // player
+    const pPct = Math.max(0, Math.round((state.hp / state.hpMax) * 100));
+    playerHPFill.style.width = pPct + "%";
+  }
+
+function dmgCalc(attackerAtk, defenderDef, critChance=0.05){
+  let raw = attackerAtk + roll(6) - 3;
+  const K = 25; // bigger K = weaker armor
+  const mult = 1 - (defenderDef / (defenderDef + K));
+  let amount = Math.max(1, Math.round(raw * mult));
+  let crit = false;
+  if (Math.random() < critChance){ amount = Math.round(amount * 1.5); crit = true; }
+  return { amount, crit };
+  }
+
+  function endCombat(victory){
+    // disable actions
+    [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = true);
+
+    if (victory){
+      state.battlesWon++;
+      // Rewards: base + small random spice, with perk adjustments done in grantBattleRewards
+      const reward = { ...enemy.reward };
+      // 10% drop chances (example)
+      if (chance(0.10)) reward.items = { ...(reward.items||{}), food: 1 };
+      if (chance(0.08)) reward.items = { ...(reward.items||{}), duct_tape: (reward.items?.duct_tape||0)+1 };
+      grantBattleRewards(reward);
+
+      uiLog(`Victory! +${reward.xp||0} XP, +${reward.caps||0} caps${reward.items? " (loot gained)" : ""}.`);
+      log(`Defeated ${enemy.name}.`);
+      updateUI();
+    } else {
+      state.battlesLost++;
+      log(`You were overwhelmed by ${enemy.name}.`);
+      updateUI();
+      if (state.hp <= 0) die();
+    }
+  }
+
+  function enemyTurn(){
+    if (enemy.curHP <= 0) return;
+    const { def } = pstats();
+    const result = dmgCalc(enemyStats.atk, def, 0.05);
+    damage(result.amount);
+    uiLog(`${enemy.name} hits you for ${result.amount}${result.crit? " (CRIT!)" : ""}.`);
+    refreshBars();
+    if (state.hp <= 0) {
+      uiLog("You collapse!");
+      endCombat(false);
+      return true;
+    }
+    return false;
+  }
+
+  function playerTurn(){
+    // re-enable
+    [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = false);
+  }
+
+  // Action: Attack
+  btnAttack.onclick = () => {
+    [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = true);
+    const { atk, crit } = pstats();
+    const result = dmgCalc(atk, enemyStats.def, pstats().crit);
+    enemy.curHP = Math.max(0, enemy.curHP - result.amount);
+    uiLog(`You strike for ${result.amount}${result.crit? " (CRIT!)" : ""}.`);
+    refreshBars();
+
+    if (enemy.curHP <= 0){
+      uiLog(`The ${enemy.name} goes down.`);
+      endCombat(true);
+      return;
+    }
+
+    // enemy retaliates
+    setTimeout(()=>{
+      const ended = enemyTurn();
+      if (!ended) playerTurn();
+    }, 150);
+  };
+
+  // Action: Item (usable combat items from inventory)
+  btnItem.onclick = () => {
+    itemBox.innerHTML = "";
+    migrateInventoryShape();
+    const usable = inv().filter(s => ITEMS[s.id]?.use);
+    if (!usable.length){
+      itemBox.append(el("p","small muted","(No usable items)"));
+      return;
+    }
+    usable.forEach(s=>{
+      const meta = ITEMS[s.id];
+      const b = el("button","choice", `${meta.name} ×${s.qty}`);
+      b.onclick = () => {
+        // call existing useItem logic (heals/rad etc.)
+        const consumed = useItem(s.id); // may be false if equip-only; our meta.use returns boolean
+        uiLog(`You use ${meta.name}.`);
+        refreshBars();
+        itemBox.innerHTML = "";
+
+        // enemy gets a turn after item use
+        setTimeout(()=>{
+          const ended = enemyTurn();
+          if (!ended) playerTurn();
+        }, 150);
+      };
+      itemBox.append(b, el("span","small muted"," "));
+    });
+  };
+
+  // Action: Flee
+  btnFlee.onclick = () => {
+    [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = true);
+    const ps = pstats();
+    const fleeBonus = state.perks.includes("swift") ? 1.15 : 1.0;
+    const fleeChance = Math.min(0.85, 0.35 + ((ps.spd - enemyStats.spd) * 0.03)) * fleeBonus;
+    if (chance(fleeChance)){
+      uiLog("You slip away!");
+      log(`You fled from ${enemy.name}.`);
+      updateUI();
+      closeModal();
+      return;
+    } else {
+      uiLog("You fail to escape!");
+      setTimeout(()=>{
+        const ended = enemyTurn();
+        if (!ended) playerTurn();
+      }, 150);
+    }
+  };
+
+  // Determine initiative (first turn) by speed
+  const firstPlayer = pstats().spd >= enemyStats.spd;
+  refreshBars();
+  uiLog(`A wild ${enemy.name} appears!`);
+  if (firstPlayer){
+    uiLog("You act first.");
+    playerTurn();
+  } else {
+    uiLog(`${enemy.name} moves first!`);
+    const ended = enemyTurn();
+    if (!ended) playerTurn();
+  }
+}
+
+/* ========= Save/Load ========= */
+// NOTE: Saves state into localStorage
+// - If you add new state fields, they’ll be saved automatically
+
+function save(){
+  try {
+    localStorage.setItem("wastelife-save", JSON.stringify(state));
+    info("Game saved.");
+  } catch (e) {
+    console.error(e);
+    log("Save failed (storage full or blocked).","muted");
+  }
+}
+
+function load(){
+  const raw = localStorage.getItem("wastelife-save");
+  if (!raw){ info("No save found."); return; }
+
+  try {
+    // parse and assign
+    state = JSON.parse(raw);
+
+    // --- backfill for older saves ---
+    if (!state.equipment) state.equipment = { head:null, chest:null, legs:null, weapon:null };
+    if (!Array.isArray(state.inventory)) state.inventory = [];
+    if (typeof state.factionRep !== "number") state.factionRep = 0;
+    if (!Array.isArray(state.perks)) state.perks = [];
+    if (!Array.isArray(state.log)) state.log = [];
+
+    // migrate any old inventory formats
+    migrateInventoryShape();
+
+    info("Save loaded.");
+    updateUI();
+  } catch(e){
+    console.error(e);
+    log("Save file corrupted.","muted");
+  }
+}
+
+function migrateInventoryShape(){
+  if (!Array.isArray(state.inventory)) state.inventory = [];
+
+  const normalized = [];
+
+  const pushStack = (id, qty=1) => {
+    id = slugify(id);
+    qty = Number(qty) || 1;
+    const existing = normalized.find(s => s.id === id);
+    if (existing) existing.qty += qty;
+    else normalized.push({ id, qty });
+  };
+
+  // Old saves: array of strings
+  if (state.inventory.some(x => typeof x === "string")) {
+    const counts = {};
+    state.inventory.forEach(x => {
+      const id = slugify(x);
+      counts[id] = (counts[id] || 0) + 1;
+    });
+    Object.entries(counts).forEach(([id,qty]) => pushStack(id, qty));
+  } else {
+    // Mixed / malformed shapes
+    state.inventory.forEach(s => {
+      if (typeof s === "string") pushStack(s, 1);
+      else if (s && typeof s === "object") {
+        if ("id" in s && "qty" in s) pushStack(s.id, s.qty);
+        else {
+          // objects like {junk:2, duct_tape:1}
+          Object.entries(s).forEach(([k,v]) => pushStack(k, v));
+        }
+      }
+    });
+  }
+
+  state.inventory = normalized;
+}
+
+
+function slugify(x){ return String(x).toLowerCase().replace(/\s+/g,'_'); }
+
+function reset(){
+  if (confirm("Start a new run? Current progress will be lost unless saved.")) {
+    newRun();
+    $("#log").innerHTML = "";
+  }
+}
+
+/* ========= Death ========= */
+// NOTE: Called when player dies (HP 0, RAD 100, age 120)
+// - You can expand death causes or add permadeath logs here
+
+function die(){
+  state.alive = false;
+  const cause = state.hp<=0 ? "your injuries" : state.rad>=100 ? "radiation sickness" : "old age";
+  log(`You died at age ${state.age} from ${cause}. Final caps: ${state.caps}. Karma: ${state.karma}.`, "muted");
+  updateUI();
+}
+
+/* ========= Trade / Barter ========= */
+// Base buy prices (caps) — tweak freely
+const TRADE_BASE = {
+  food: 6,
+  med_patch: 18,
+  antirad: 24,
+  water_filter: 28,
+  duct_tape: 7,
+  junk: 4,
+  canteen: 12,
+  knife: 45,
+  helmet: 30,
+  armor: 60,
+  boots: 24,
+  scrap_blade: 28,
+  holotape: 20, // also used by your sell shortcut
+};
+
+// Vendor stock generator (called per visit)
+function genVendorStock(kind="Trader"){
+  // id -> qty
+  const stock = {};
+  const put = (id, q)=>{ stock[slugify(id)] = (stock[slugify(id)]||0) + q; };
+
+  // core consumables
+  put("food", rnd(2,6));
+  put("med_patch", rnd(1,3));
+  put("antirad", rnd(1,2));
+  put("duct_tape", rnd(1,4));
+  put("junk", rnd(2,6));
+
+  // gear (sometimes)
+  if (rnd(1,100) > 65) put("knife", 1);
+  if (rnd(1,100) > 70) put("helmet", 1);
+  if (rnd(1,100) > 75) put("boots", 1);
+  if (rnd(1,100) > 80) put("armor", 1);
+  if (rnd(1,100) > 78) put("water_filter", 1);
+
+  // faction flavored discount later; stock is same
+  return { kind, stock, haggleCut: 0, visitedYear: state.year };
+}
+
+// Price calculator with Charisma/perk/faction/haggle
+function tradePrice(id, mode, vendor){
+  // mode: "buy" or "sell"
+  const base = TRADE_BASE[id] || 10;
+  // vendors buy cheaper than they sell
+  let price = mode === "buy" ? base : Math.max(1, Math.round(base * 0.5));
+
+  // charisma effect (~3% per point from 5)
+  const cha = state.special?.C || 5;
+  const chaAdj = 1 - ((cha - 5) * 0.03);
+  price = Math.max(1, Math.round(price * chaAdj));
+
+  // perk: Silver Tongue ~15% better
+  if (state.perks?.includes("silverTongue")){
+    price = Math.round(mode === "buy" ? price * 0.85 : price * 1.15);
+  }
+
+  // Settlers faction small discount with their caravans
+  if (state.faction === "settlers" && vendor?.kind === "Caravan"){
+    price = Math.round(mode === "buy" ? price * 0.95 : price * 1.05);
+  }
+
+  // one-time haggle cut for this vendor session (applies to buy only)
+  if (mode === "buy" && (vendor?.haggleCut||0) > 0){
+    price = Math.round(price * (1 - vendor.haggleCut));
+  }
+
+  return Math.max(1, price);
+}
+
+function openTrade(kind="Trader"){
+  const vendor = genVendorStock(kind);
+
+  const m = openModal(vendor.kind === "Caravan" ? "Caravan Trader" : "Trader");
+  const head = el("div","kv");
+  head.append(el("div", null, "Your Caps"));
+  head.append(el("div", null, `${state.caps}`));
+  m.content.append(head, el("div","hr"));
+
+  // HAGGLE (once per visit, CHA check)
+  const hagRow = el("div","kv");
+  hagRow.append(el("div", null, "Haggle"));
+  const hagBox = el("div");
+  const hagBtn = el("button","choice","Try to Haggle");
+  const hagNote = el("span","small muted","  (better buy prices this visit)");
+  hagBtn.onclick = ()=>{
+    // modest charisma check; Swift doesn't help here
+    const ok = skillCheck("C", 12);
+    if (ok){
+      vendor.haggleCut = 0.10 + (state.perks.includes("silverTongue") ? 0.05 : 0);
+      log("Your pitch lands. Prices down this visit.");
+    } else {
+      vendor.haggleCut = 0; // no penalty
+      log("Trader shrugs. No deal.");
+    }
+    openTrade(kind); // re-render with new prices
+  };
+  // disable if already haggled
+  if (vendor.haggleCut>0) { hagBtn.textContent = "Haggled ✓"; hagBtn.disabled = true; }
+  hagBox.append(hagBtn, hagNote);
+  hagRow.append(hagBox);
+  m.content.append(hagRow, el("div","hr"));
+
+  // Tabs: Buy / Sell
+  let tab = state._tradeTab || "buy";
+  const tabs = el("div","kv");
+  tabs.append(el("div", null, "Mode"));
+  const tbox = el("div");
+  const buyBtn = el("button","choice", tab==="buy" ? "Buy ✓" : "Buy");
+  const sellBtn = el("button","choice", tab==="sell" ? "Sell ✓" : "Sell");
+  buyBtn.onclick = ()=>{ state._tradeTab="buy"; openTrade(kind); };
+  sellBtn.onclick = ()=>{ state._tradeTab="sell"; openTrade(kind); };
+  tbox.append(buyBtn, sellBtn);
+  tabs.append(tbox);
+  m.content.append(tabs, el("div","hr"));
+
+  if (tab === "buy"){
+    // BUY LIST
+    const ids = Object.keys(vendor.stock).filter(id=>vendor.stock[id]>0);
+    if (!ids.length){
+      m.content.append(el("p","muted","(Trader is out of stock)"));
+    } else {
+      ids.sort();
+      ids.forEach(id=>{
+        const qty = vendor.stock[id];
+        const meta = ITEMS[id] || { name:id };
+        const row = el("div","kv");
+        row.append(el("div",null, `${meta.name || id} ×${qty}`));
+        const d = el("div");
+
+        if (meta.desc) d.append(el("div","small muted", meta.desc));
+
+        const p = tradePrice(id, "buy", vendor);
+        const buy1 = el("button","choice", `Buy (${p} caps)`);
+        buy1.onclick = ()=>{
+          if (vendor.stock[id] <= 0){ log("Sold out."); return; }
+          if (state.caps < p){ log("Not enough caps."); return; }
+          state.caps -= p;
+          vendor.stock[id]--;
+          addItem(id, 1);
+          log(`Bought 1 ${meta.name || id} for ${p} caps.`);
+          updateUI(); openTrade(kind);
+        };
+        d.append(buy1);
+        row.append(d);
+        m.content.append(row, el("div","hr"));
+      });
+    }
+  } else {
+    // SELL LIST (your inventory, anything with a base price)
+    migrateInventoryShape();
+    const sellables = inv().filter(s => TRADE_BASE.hasOwnProperty(s.id) && s.qty>0);
+    if (!sellables.length){
+      m.content.append(el("p","muted","(You have nothing the trader wants.)"));
+    } else {
+      sellables.sort((a,b)=> (ITEMS[a.id]?.name||a.id).localeCompare(ITEMS[b.id]?.name||b.id));
+      sellables.forEach(s=>{
+        const meta = ITEMS[s.id] || { name:s.id };
+        const row = el("div","kv");
+        row.append(el("div",null, `${meta.name || s.id} ×${s.qty}`));
+        const d = el("div");
+
+        if (meta.desc) d.append(el("div","small muted", meta.desc));
+
+        const p = tradePrice(s.id, "sell", vendor);
+        const sell1 = el("button","choice", `Sell (+${p} caps)`);
+        sell1.onclick = ()=>{
+          if (countItem(s.id) <= 0) return;
+          removeItem(s.id, 1);
+          state.caps += p;
+          // vendor gains it (optional)
+          vendor.stock[s.id] = (vendor.stock[s.id]||0) + 1;
+          log(`Sold 1 ${meta.name || s.id} for ${p} caps.`);
+          updateUI(); openTrade(kind);
+        };
+        d.append(sell1);
+        row.append(d);
+        m.content.append(row, el("div","hr"));
+      });
+    }
+  }
+
+  // Footer tip
+  m.content.append(el("p","small muted",
+    vendor.haggleCut>0 ? "Haggled prices active for this visit." :
+    "Tip: Charisma and Silver Tongue improve deals.")
+  );
+}
+
+/* ========= Event Wiring ========= */
+// NOTE: Buttons in HTML are connected to functions here
+// - Add new button handlers if you add new buttons in HTML
+$("#btn-age").onclick = ()=>{ if (!state.pendingChoice) ageUp(); };
+$("#faction-pill-wrapper").onclick = () => {
+  openJoinFaction();
+};
+$("#btn-explore").onclick = ()=>{ if (!state.pendingChoice) explore(); updateUI(); };
+$("#btn-work").onclick = ()=>{ if (!state.pendingChoice) work(); updateUI(); };
+$("#btn-heal").onclick = ()=>{ if (!state.pendingChoice) healAction(); updateUI(); };
+$("#btn-trade").onclick = ()=> openTrade("Caravan");
+$("#btn-relationships").onclick = ()=> openRelationships();
+$("#btn-inventory").onclick = ()=> openInventory();
+$("#btn-join-faction").onclick = ()=> openJoinFaction();
+$("#btn-perks").onclick = ()=> openPerks();
+
+$("#btn-save").onclick = save;
+$("#btn-load").onclick = load;
+$("#btn-reset").onclick = reset;
+
+/* ========= Boot ========= */
+newRun();
+updateUI();
+</script>
+</body>
+</html>
