@@ -2806,6 +2806,232 @@ $("#btn-reset").onclick = reset;
 /* ========= Boot ========= */
 newRun();
 updateUI();
+/* ====== TEXT MAP (sidebar) — cleaner UI =====================================
+   Adds "Travel / Map" to Actions. World modal shows Towns/Wilderness sections,
+   current location tag, and a two-pane Town view inside the modal.
+=============================================================================*/
+(function(){
+  if (window.WL_TextMap) return;
+
+  /* --- Data --- */
+  const WORLD = [
+    { id:"dustford", name:"Dustford", type:"town", desc:"A hardy settlement around a water recycler." },
+    { id:"ironwood", name:"Ironwood", type:"town", desc:"Frontier town by a derelict foundry and old pines." },
+    { id:"wastes",   name:"Wasteland Dunes", type:"wild", desc:"Dunes and scrub. Storms hit fast." },
+    { id:"ruins",    name:"Cracked Ruins",   type:"wild", desc:"Collapsed towers; rich salvage, risky rad pockets." }
+  ];
+
+  const TOWNS = {
+    dustford: [
+      { id:"gate",     name:"South Gate & Watch",  desc:"Bulletin board with bounties and odd jobs." },
+      { id:"market",   name:"Market Hub",          desc:"Scrap, filters, tools. Haggling all day." },
+      { id:"clinic",   name:"Tinroof Clinic",      desc:"Bandages, tinctures, and a steady medic." },
+      { id:"tavern",   name:"Rusty Lantern",       desc:"Cards, rumors, and endless stew." },
+      { id:"workshop", name:"Workshop Row",        desc:"Patch weapons, press ammo, trade plans." },
+      { id:"water",    name:"Water Plant",         desc:"Reclaimer hums. Clean canteens for a fee." },
+      { id:"chapel",   name:"Chapel of the Green", desc:"Candles and seedlings for safe roads." },
+      { id:"hall",     name:"Mayor’s Hall",        desc:"Permits, disputes, community notices." }
+    ],
+    ironwood: [
+      { id:"gate",    name:"North Gate",      desc:"Checkpoint and lookout. Ranger notices flap." },
+      { id:"foundry", name:"Old Foundry",     desc:"Smelter floor turned heavy workshop." },
+      { id:"depot",   name:"Rail Depot",      desc:"Boxcars, manifests, rumors at the desk." },
+      { id:"apoth",   name:"Apothecary",      desc:"Tonics and powders (mind the dosage)." },
+      { id:"cantina", name:"Iron Cantina",    desc:"Music, dice, tall tales after sundown." },
+      { id:"sawmill", name:"Sawmill Yard",    desc:"Planks and sawdust; the foreman barters." },
+      { id:"lodge",   name:"Ranger Lodge",    desc:"Maps and trophies; contracts by the door." },
+      { id:"archive", name:"Old Tech Archive",desc:"Manuals and schematics; scribes whisper." }
+    ]
+  };
+
+  const byId = id => WORLD.find(n=>n.id===id);
+
+  /* --- Sidebar button --- */
+  function ensureSidebarButton(){
+    if (document.querySelector("#btn-map")) return;
+    const slot = document.querySelector(".actions .group");
+    const btn = document.createElement("button");
+    btn.id = "btn-map";
+    btn.textContent = "Travel / Map";
+    btn.onclick = openWorld;
+    (slot || document.querySelector(".actions")).appendChild(btn);
+  }
+
+  /* --- World modal (clean sections, current location) --- */
+  function openWorld(){
+    const m = openModal("World Travel");
+    const c = m.content;
+
+    // where are we?
+    const here = state?.location || "Unknown";
+    c.append(pSmall(`You are at: ${here}`), hr());
+    c.append(pSmall("Towns offer buildings/shops. Wilderness is good for exploration (risky)."), hr());
+
+    const towns = WORLD.filter(n=>n.type==="town");
+    const wilds = WORLD.filter(n=>n.type!=="town");
+
+    c.append(sectionHeader("Towns"));
+    towns.forEach(n => c.append(worldRow(n), hr()));
+
+    c.append(sectionHeader("Wilderness"));
+    wilds.forEach(n => c.append(worldRow(n), hr()));
+  }
+
+  function sectionHeader(text){
+    const t = document.createElement("div");
+    t.className = "title";
+    t.textContent = text;
+    return t;
+  }
+
+  function tag(text){
+    const s = document.createElement("span");
+    s.className = "pill";
+    s.style.marginLeft = "8px";
+    s.textContent = text;
+    return s;
+  }
+
+  function worldRow(node){
+    const row = kv();
+    row.left.textContent = node.name;
+    row.right.append(pSmall(node.desc));
+
+    if (state.location === node.name) row.left.appendChild(tag("here"));
+
+    if (node.type === "town"){
+      const view = choice("View Town");
+      view.onclick = () => openTownView(node.id);
+      row.right.append(view);
+    }
+
+    const go = choice(state.location === node.name ? "— already here —" : "Travel Here");
+    go.disabled = (state.location === node.name);
+    go.onclick = () => travelTo(node.id);
+    row.right.append(go);
+
+    return row.wrap;
+  }
+
+  /* --- Town modal (two-pane inside modal) --- */
+  function openTownView(townId){
+    const town = byId(townId);
+    const m = openModal(`${town.name} — Locations`);
+    const c = m.content;
+
+    // top bar (back + breadcrumb)
+    const bar = kv();
+    bar.left.textContent = `World ▸ ${town.name}`;
+    const back = choice("Back to World");
+    back.onclick = openWorld;
+    bar.right.append(back);
+    c.append(bar.wrap, hr(), pSmall(town.desc), hr());
+
+    // layout: left list, right details (simple with two columns using .kv blocks)
+    const layout = document.createElement("div");
+    layout.style.display = "grid";
+    layout.style.gridTemplateColumns = "260px 1fr";
+    layout.style.gap = "12px";
+
+    // left: building buttons
+    const left = document.createElement("div");
+    const list = document.createElement("div");
+    list.style.display = "grid";
+    list.style.gap = "8px";
+    left.append(list);
+
+    // right: detail panel
+    const right = document.createElement("div");
+    const detailName = document.createElement("h3");
+    detailName.className = "title";
+    const detailDesc = document.createElement("p");
+    detailDesc.className = "small";
+    const actionBar = document.createElement("div");
+    right.append(detailName, detailDesc, actionBar);
+
+    layout.append(left, right);
+    c.append(layout);
+
+    const buildings = TOWNS[townId] || [];
+    let selected = null;
+
+    function select(b){
+      selected = b;
+      // highlight
+      list.querySelectorAll(".choice").forEach(x=>x.classList.remove("active"));
+      const btn = list.querySelector(`[data-id="${b.id}"]`);
+      if (btn) btn.classList.add("active");
+
+      // detail
+      detailName.textContent = b.name;
+      detailDesc.textContent = b.desc;
+      actionBar.innerHTML = "";
+
+      if (state.location !== town.name){
+        const travel = choice(`Travel to ${town.name}`);
+        travel.onclick = () => travelTo(town.id);
+        actionBar.append(travel);
+      } else {
+        const enter = choice("Enter (stub)");
+        enter.onclick = () => {
+          log(`You enter ${b.name} in ${town.name}.`);
+          window.dispatchEvent(new CustomEvent("town:enterBuilding",{ detail:{ town: townId, building: b }}));
+          closeModal();
+        };
+        actionBar.append(enter);
+      }
+    }
+
+    if (!buildings.length){
+      right.append(pSmall("(No locations defined yet.)"));
+      return;
+    }
+
+    buildings.forEach((b, i)=>{
+      const btn = choice(b.name);
+      btn.dataset.id = b.id;
+      btn.onclick = () => select(b);
+      list.append(btn);
+      if (i === 0) select(b);
+    });
+  }
+
+  /* --- Travel (with optional encounter) --- */
+  function travelTo(nodeId){
+    const node = byId(nodeId);
+    if (!node) return;
+
+    if (typeof maybeStartCombat === "function"){
+      const started = maybeStartCombat(node.type==="town" ? 0.15 : 0.30, "wastes", "travel");
+      if (started) { closeModal(); return; }
+    }
+
+    state.location = node.name;
+    log(`You travel to ${node.name}.`);
+    updateUI();
+    closeModal();
+  }
+
+  /* --- tiny DOM helpers (use your styles) --- */
+  function kv(){ const w=document.createElement("div"); w.className="kv";
+    const a=document.createElement("div"), b=document.createElement("div"); w.append(a,b);
+    return { wrap:w, left:a, right:b }; }
+  function choice(t){ const b=document.createElement("button"); b.className="choice"; b.textContent=t; return b; }
+  function hr(){ const d=document.createElement("div"); d.className="hr"; return d; }
+  function pSmall(t){ const p=document.createElement("p"); p.className="small muted"; p.textContent=t; return p; }
+
+  /* --- hook into UI lifecycle --- */
+  ensureSidebarButton();
+  const _updateUI = window.updateUI;
+  if (typeof _updateUI === "function"){
+    window.updateUI = function(){
+      _updateUI.apply(this, arguments);
+      ensureSidebarButton();
+    };
+  }
+
+  window.WL_TextMap = { world: WORLD, towns: TOWNS, openWorld, openTownView, travelTo };
+})();
 </script>
 </body>
 </html>
