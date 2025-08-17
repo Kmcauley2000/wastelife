@@ -338,6 +338,25 @@ const ITEMS = {
     }
   },
 
+//// SETTLER MAIN CAMPAIGN ITEMS /////
+    settlers_coat: {
+    name:"Union Field Coat",
+    desc:"Sturdy Settlers issue. +5 DEF, +1 AGI.",
+    slot:"chest", bonus:{ def:5, agi:1 }
+  },
+  settlers_carbine: {
+    name:"Settlers Carbine",
+    desc:"Reliable union carbine. +11 ATK, +2% crit.",
+    slot:"weapon", bonus:{ atk:11, crit:0.02 }
+  },
+  diplomats_coat: {
+    name:"Diplomat’s Coat",
+    desc:"Worn by peacemakers. +4 DEF, +2 AGI.",
+    slot:"chest", bonus:{ def:4, agi:2 }
+  },
+
+////////////////////////////////////////////////////////
+
   helmet: { name:"Makeshift Helmet", desc:"Protects your head. +2 defense.", slot:"head", bonus:{def:2} },
   armor:  { name:"Leather Armor",   desc:"Light chest armor. +3 defense.",   slot:"chest", bonus:{def:3} },
   boots:  { name:"Sturdy Boots",    desc:"Protect your legs. +1 defense.",   slot:"legs",  bonus:{def:1} },
@@ -819,6 +838,7 @@ function seedRelationships() {
   }
   return rel;
 }
+
 
 /* ========= UI ========= */
 function updateUI() {
@@ -2199,6 +2219,16 @@ function openJoinFaction(){
     });
   }
 
+  // --- Campaign (Settlers only) ---
+  if (state.faction === "settlers") {
+    const box = el("div","faction-action");
+    box.append(el("div","label", "Settlers Campaign"));
+    const b = el("button","choice","Open Campaign");
+    b.onclick = openSettlersCampaign;
+    box.append(b);
+    m.content.append(box);
+  }
+
   // ── Leave faction (danger zone) at bottom
   m.content.append(el("div","hr"));
   const leaveRow = el("div","kv");
@@ -2219,9 +2249,6 @@ function openJoinFaction(){
   leaveRow.append(leaveBox);
   m.content.append(leaveRow);
 }
-
-
-
 
 
  // ========= Perks Menu =========
@@ -2249,6 +2276,274 @@ function openPerks(){
 }
 
 function perkPoints(){ return Math.floor(state.level/3) - state.perks.length; }
+
+/* ===================== Settlers Campaign (branching) ===================== */
+function ensureCampaignState(){
+  if (!state.campaign) state.campaign = {};
+  if (!state.campaign.settlers)
+    state.campaign.settlers = { chapter: 0, flags:{}, ending: null, title: "Dustford Rising" };
+}
+
+function openSettlersCampaign(){
+  ensureCampaignState();
+  const c = state.campaign.settlers;
+  const m = openModal(`Settlers Campaign — ${c.title}`);
+
+  // Header / status
+  const head = el("div","kv");
+  head.append(el("div",null,"Status"));
+  head.append(el("div","small muted",
+    c.ending ? `Completed: ${c.ending}` : `Chapter ${c.chapter+1}/5`));
+  m.content.append(head, el("div","hr"));
+
+  // If finished, show summary only (no replay/reset)
+  if (c.ending){
+    const doneRow = el("div","kv");
+    doneRow.append(el("div", null, "Campaign"));
+    const note = el("div");
+    note.append(el("div","small muted","Completed — not replayable."));
+    doneRow.append(note);
+    m.content.append(doneRow);
+
+    if (Object.keys(c.flags).length){
+      m.content.append(el("div","hr"));
+      const flags = el("p","small muted", "Your key choices: " +
+        Object.keys(c.flags).map(k=>`${k}=${c.flags[k]}`).join(", "));
+      m.content.append(flags);
+    }
+    return; // no start/continue button when completed
+  }
+
+  // Start / continue button (only if not completed)
+  const startRow = el("div","kv");
+  startRow.append(el("div",null,"Continue"));
+  const startBox = el("div");
+  const startBtn = el("button","choice", `Begin Chapter ${c.chapter+1}`);
+  startBtn.onclick = ()=>{ closeModal(); runSettlersChapter(); };
+  startBox.append(startBtn);
+  startRow.append(startBox);
+  m.content.append(startRow);
+
+  // Small log of key flags (optional)
+  if (Object.keys(c.flags).length){
+    m.content.append(el("div","hr"));
+    const flags = el("p","small muted", "Choices so far: " +
+      Object.keys(c.flags).map(k=>`${k}=${c.flags[k]}`).join(", "));
+    m.content.append(flags);
+  }
+}
+
+function runSettlersChapter(){
+  ensureCampaignState();
+  const c = state.campaign.settlers;
+  const ch = c.chapter;
+
+  // Guard: must be in the Settlers faction
+  if (state.faction !== "settlers"){
+    setChoice("You must be a Settlers Union member to undertake this campaign.", [
+      { label:"Okay", run:()=>{} }
+    ]);
+    return;
+  }
+
+  // Guard: campaign is one-time only
+  if (c.ending){
+    setChoice("The Settlers campaign is already complete and cannot be replayed.", [
+      { label:"OK", run:()=>{} }
+    ]);
+    return;
+  }
+
+  // CHAPTERS 0..4 then Ending
+  if (ch === 0){
+    setChoice("Ch.1 — Caravan Contract: A Dustford caravan needs an escort. Which route do you choose?", [
+      { label:"Direct through the salt flats (E check, faster, riskier)",
+        run:()=>{
+          const ok = skillCheck("E",12);
+          c.flags.route = "direct";
+          if (ok){ changeRep(+3); gainXP(12); state.caps += money(1.0); log("Efficient run. You dodge the worst of it. +rep, +XP, +caps."); }
+          else { damage(6); rad(6); changeRep(+2); gainXP(8); log("Rough crossing. You still deliver. HP -6, RAD +6, +rep."); }
+          c.chapter++; updateUI();
+        } },
+      { label:"Back roads (safer, slower, lower payout)",
+        run:()=>{
+          c.flags.route = "back";
+          changeRep(+3); gainXP(10); state.caps += money(0.6);
+          log("Long way round. Fewer scrapes, lighter purse. +rep, modest caps.");
+          c.chapter++; updateUI();
+        } },
+      { label:"Decline the job (Karma +2, but Union takes note)",
+        run:()=>{
+          c.flags.route = "decline";
+          changeKarma(+2); changeRep(-2); log("You pass. The caravan finds other guards. Karma up; reputation dips.");
+          c.chapter++; updateUI();
+        } },
+    ]);
+    return;
+  }
+
+  if (ch === 1){
+    setChoice("Ch.2 — Where to Invest: Dustford needs funds. Where do you push resources?", [
+      { label:"Fortify the palisade (-10 caps, +rep)",
+        run:()=>{
+          if (state.caps < 10){ log("Not enough caps to fund the wall."); return; }
+          state.caps -= 10; c.flags.walls = 1; changeRep(+4); gainXP(10);
+          log("You organize lumber and braces. The wall stiffens. +rep.");
+          c.chapter++; updateUI();
+        } },
+      { label:"Repair the water plant (-10 caps, +rep, better recovery)",
+        run:()=>{
+          if (state.caps < 10){ log("Not enough caps to fix the plant."); return; }
+          state.caps -= 10; c.flags.water = 1; changeRep(+3); gainXP(10);
+          log("Clean water flows steadier. Spirits rise. +rep.");
+          c.chapter++; updateUI();
+        } },
+      { label:"Split resources (-16 caps total, modest both)",
+        run:()=>{
+          if (state.caps < 16){ log("You need 16 caps to split effectively."); return; }
+          state.caps -= 16; c.flags.walls = 1; c.flags.water = 1; changeRep(+4); gainXP(12);
+          log("Tight budget, but both projects improve. +rep.");
+          c.chapter++; updateUI();
+        } },
+    ]);
+    return;
+  }
+
+  if (ch === 2){
+    setChoice("Ch.3 — A Knife in the Dark: Raider scouts probe the outskirts. Your approach?", [
+      { label:"Ambush them (A check)",
+        run:()=>{
+          const ok = skillCheck("A",12);
+          c.flags.ambush = ok ? "clean" : "messy";
+          if (ok){ changeRep(+4); gainXP(12); log("Swift and clean. They scatter. +rep."); }
+          else { damage(8); changeRep(+2); gainXP(8); log("You win, but not without cuts. HP -8, +rep."); }
+          c.chapter++; updateUI();
+        } },
+      { label:"Shadow and warn the town (P check, +karma)",
+        run:()=>{
+          const ok = skillCheck("P",12);
+          c.flags.warned = !!ok;
+          changeKarma(+2);
+          if (ok){ changeRep(+3); gainXP(12); log("You track them and alert the watch. +rep, +karma."); }
+          else { changeRep(+1); gainXP(8); log("You lose the trail, but the warning helps a little. +rep."); }
+          c.chapter++; updateUI();
+        } },
+      { label:"Attempt a parley (C check, big swing)",
+        run:()=>{
+          const ok = skillCheck("C",13);
+          c.flags.truce = !!ok;
+          if (ok){ changeRep(+2); changeKarma(+5); gainXP(14); log("A fragile understanding—no blood tonight. +karma."); }
+          else { changeRep(-2); damage(6); log("Talks sour. Word spreads you were duped. HP -6, rep down."); }
+          c.chapter++; updateUI();
+        } },
+    ]);
+    return;
+  }
+
+  if (ch === 3){
+    setChoice("Ch.4 — The Eve: The town prepares. How do you spend the day?", [
+      { label:"Train militia (+rep, +XP)",
+        run:()=>{
+          c.flags.militia = 1; changeRep(+3); gainXP(14);
+          log("You drill townsfolk until sundown. +rep, +XP.");
+          c.chapter++; updateUI();
+        } },
+      { label:"Lay traps (cost: 2 Junk + 1 Duct Tape)",
+        run:()=>{
+          if (countItem("junk")>=2 && countItem("duct_tape")>=1){
+            removeItem("junk",2); removeItem("duct_tape",1);
+            c.flags.traps = 1; changeRep(+3); gainXP(12);
+            log("Wire and pits along likely routes. +rep, +XP.");
+            c.chapter++; updateUI();
+          } else {
+            log("You need 2× Junk and 1× Duct Tape.");
+          }
+        } },
+      { label:"Stock granary (-10 caps, improves endurance)",
+        run:()=>{
+          if (state.caps < 10){ log("Not enough caps for supplies."); return; }
+          state.caps -= 10; c.flags.stock = 1; gainXP(10); changeRep(+2);
+          log("You shore up food stores and medicine. +rep.");
+          c.chapter++; updateUI();
+        } },
+    ]);
+    return;
+  }
+
+  if (ch === 4){
+    // Finale — compute ending
+    const end = settlersFinale();
+    setChoice(`Ch.5 — The Dustford Crisis: ${end.title}`, [
+      { label:"Acknowledge outcome", run:()=>{
+        // rewards already granted in settlersFinale
+        state.campaign.settlers.ending = end.key;
+        c.chapter++; updateUI();
+      } }
+    ]);
+    return;
+  }
+
+  // Safety: if somehow called again after completion
+  setChoice("The Settlers campaign is complete.", [
+    { label:"OK", run:()=>{} }
+  ]);
+}
+
+function settlersFinale(){
+  const f = state.campaign.settlers.flags || {};
+  // Score prep
+  let score = 0;
+  if (f.walls) score += 1;
+  if (f.water) score += 1;
+  if (f.traps) score += 1;
+  if (f.militia) score += 1;
+  if (f.stock) score += 1;
+  if (f.warned) score += 1;
+  if (f.route === "direct") score += 1;      // bold earlier choice helps
+  if (f.route === "decline") score -= 1;
+  if (f.ambush === "clean") score += 1;
+  if (f.ambush === "messy") score -= 1;
+  if (f.truce) score += 2;                   // strong alternate path
+
+  // Branches / endings
+  // 1) Pacifist accord (truce true) — special coat
+  if (f.truce){
+    changeRep(+12); changeKarma(+6); gainXP(30);
+    addItem("diplomats_coat", 1);
+    log("Ending: The Accord — A fragile ceasefire routes raiders away from Dustford.");
+    log("Reward: Diplomat’s Coat (+4 DEF, +2 AGI), big reputation, XP.", "muted");
+    updateUI();
+    return { key:"Accord", title:"A fragile ceasefire holds." };
+  }
+
+  // 2) Strong defense — clear victory
+  if (score >= 6){
+    changeRep(+15); gainXP(40); state.caps += money(1.6);
+    addItem("settlers_carbine", 1); addItem("settlers_coat", 1);
+    log("Ending: Secure Settlement — The traps spring, militia holds, walls stand.");
+    log("Rewards: Settlers Carbine & Union Field Coat, +rep, +caps, +XP.", "muted");
+    updateUI();
+    return { key:"Secure Settlement", title:"Dustford stands strong." };
+  }
+
+  // 3) Narrow win — pyrrhic
+  if (score >= 3){
+    changeRep(+8); gainXP(25); state.caps += money(1.0);
+    damage(8); // cost of victory
+    log("Ending: Pyrrhic Victory — The town survives, but it hurts. HP -8.", "muted");
+    updateUI();
+    return { key:"Pyrrhic", title:"The town survives at a cost." };
+  }
+
+  // 4) Evacuation — fallback ending
+  changeRep(+5); gainXP(18);
+  addItem("food", 2); addItem("med_patch", 1);
+  log("Ending: Caravan Exodus — You organize a retreat to fight another day. Supplies gained.");
+  updateUI();
+  return { key:"Exodus", title:"Orderly retreat under your lead." };
+}
+
+
 
 /* ========= Modal ========= */
 function openModal(title){
@@ -2487,6 +2782,8 @@ function load(){
   try {
     // parse and assign
     state = JSON.parse(raw);
+ 
+     ensureCampaignState();
 
     // --- backfill for older saves ---
     if (!state.equipment) state.equipment = { head:null, chest:null, legs:null, weapon:null };
@@ -2803,9 +3100,34 @@ $("#btn-save").onclick = save;
 $("#btn-load").onclick = load;
 $("#btn-reset").onclick = reset;
 
-/* ========= Boot ========= */
-newRun();
-updateUI();
+// --- Boot & wiring ---
+window.addEventListener("DOMContentLoaded", () => {
+  // Start a new run (or replace with load(); if you want to auto-load)
+  newRun();             // creates state and calls updateUI()
+  ensureCampaignState(); // safe now that state exists
+
+  // Main action buttons
+  $("#btn-age").onclick = ageUp;
+  $("#btn-explore").onclick = explore;
+  $("#btn-work").onclick = work;
+  $("#btn-heal").onclick = healAction;
+
+  // Menus / modals
+  $("#btn-relationships").onclick = openRelationships;
+  $("#btn-inventory").onclick = openInventory;
+  $("#btn-trade").onclick = () => openTrade("Trader");
+  $("#btn-join-faction").onclick = openJoinFaction;
+  $("#btn-perks").onclick = openPerks;
+
+  // Save / load / reset
+  $("#btn-save").onclick = save;
+  $("#btn-load").onclick = () => { load(); ensureCampaignState(); updateUI(); };
+  $("#btn-reset").onclick = reset;
+
+  // Make the faction pill open the faction menu
+  $("#faction-pill-wrapper").onclick = openJoinFaction;
+});
+
 /* ====== TEXT MAP (sidebar) — cleaner UI =====================================
    Adds "Travel / Map" to Actions. World modal shows Towns/Wilderness sections,
    current location tag, and a two-pane Town view inside the modal.
