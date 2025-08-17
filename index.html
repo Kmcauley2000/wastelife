@@ -261,40 +261,6 @@ const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const sample = arr => arr[Math.floor(Math.random()*arr.length)];
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
-/* ========= Combat Helpers ========= */
-// Tiny RNG helpers for combat math
-const roll = (n=20) => rnd(1, n);                  // d20 style
-const chance = p => Math.random() < p;             // p: 0..1
-
-// Get player total ATK/DEF from equipment + S.P.E.C.I.A.L.
-function playerBattleStats(){
-  const gear = calcStats();
-  const base = { ...state.special };
-
-state.buffs = {
-  radShield: { turns: 0, scope: "action" },
-  fleeBoost: { turns: 0, scope: "action" },
-  strEnd:    { turns: 0, scope: "action" },
-  percInt:   { turns: 0, scope: "action" },
-  atkBoost:  { turns: 0, scope: "combat" }
-};
-
-
-
-  if (state.buffs?.strEnd > 0){ base.S += 2; base.E += 2; }
-  if (state.buffs?.percInt > 0){ base.P += 3; base.I += 3; }
-
-  let atk = gear.atk + Math.floor(base.S * 0.6) + Math.floor(base.A * 0.4);
-  let def = gear.def + Math.floor(base.E * 0.7) + Math.floor(base.P * 0.3);
-
-  if (state.buffs?.atkBoost > 0) atk += 4;
-
-  const spd  = 10 + (base.A + (gear.agi||0)) * 2;
-  const crit = 0.05 + (base.L * 0.005) + (gear.crit || 0);
-
-  return { atk, def, spd, crit };
-}
-
 
 // Common reward applier
 function grantBattleRewards(rew){
@@ -318,6 +284,8 @@ function maybeStartCombat(prob=0.3, tier="wastes", source="explore"){
   return true;
 }
 
+
+
 /* ========= Items & Inventory Helpers ========= */
 // NOTE: Add new items to ITEMS
 // NOTE: Add new crafting recipes to RECIPES
@@ -338,6 +306,17 @@ const ITEMS = {
     }
   },
 
+ // ==== Ammo (stackable resources) ====
+  ammo_38:      { name: ".38 Rounds",       desc:"Pistol cartridges for revolvers." },
+  ammo_308:     { name: ".308 Rounds",      desc:"High-power rifle ammunition." },
+  shells_12g:   { name: "12g Shells",       desc:"Shotgun shells." },
+  carbine_round:{ name: "Carbine Rounds",   desc:"Intermediate carbine cartridges." },
+  ammo_9mm:      { name:"9mm Rounds",        desc:"Common pistol/SMG cartridge." },
+  ammo_556:      { name:"5.56 Rounds",       desc:"Intermediate rifle cartridge." },
+  ammo_762:      { name:"7.62 Rounds",       desc:"Full-power rifle cartridge." },
+  ammo_44:       { name:".44 Magnum",        desc:"Big-bore lever/handgun round." },
+  energy_cell:   { name:"Energy Cell",       desc:"Standard energy weapon cell." },
+
 //// SETTLER MAIN CAMPAIGN ITEMS /////
     settlers_coat: {
     name:"Union Field Coat",
@@ -347,7 +326,8 @@ const ITEMS = {
   settlers_carbine: {
     name:"Settlers Carbine",
     desc:"Reliable union carbine. +11 ATK, +2% crit.",
-    slot:"weapon", bonus:{ atk:11, crit:0.02 }
+    slot:"weapon", bonus:{ atk:11, crit:0.02 },
+    ammo:{ id:"carbine_round", perShot:1 }
   },
   diplomats_coat: {
     name:"Diplomat’s Coat",
@@ -406,22 +386,89 @@ const ITEMS = {
               log("A shimmer trails your steps. Flee chance up; encounters rarer."); return true; }
   },
 
+/// === FireArms ===
   revolver: {
     name:"Revolver",
     desc:"+8 attack. Slightly better crits.",
-    slot:"weapon", bonus:{ atk:8, crit:0.03 }
+    slot:"weapon", bonus:{ atk:8, crit:0.03 },
+    ammo:{ id:"ammo_38", perShot:1 }
   },
 
   hunting_rifle: {
     name:"Hunting Rifle",
     desc:"+10 attack. Keen sights (+5% crit).",
-    slot:"weapon", bonus:{ atk:10, crit:0.05 }
+    slot:"weapon", bonus:{ atk:10, crit:0.05 },
+    ammo:{ id:"ammo_308", perShot:1 }
   },
 
   shotgun: {
     name:"Shotgun",
     desc:"+9 attack. Packs a punch at close range.",
-    slot:"weapon", bonus:{ atk:9 }
+    slot:"weapon", bonus:{ atk:9 },
+    ammo:{ id:"shells_12g", perShot:1 }
+  },
+
+  pipe_pistol: {
+    name:"Pipe Pistol",
+    desc:"Crude but serviceable. +5 ATK. Uses .38 rounds.",
+    slot:"weapon", bonus:{ atk:5 },
+    ammo:{ id:"ammo_38", perShot:1 }
+  },
+
+  smg_9mm: {
+    name:"9mm SMG",
+    desc:"Compact spray. +7 ATK, +2% crit. Uses 9mm.",
+    slot:"weapon", bonus:{ atk:7, crit:0.02 },
+    ammo:{ id:"ammo_9mm", perShot:1 }
+  },
+
+  assault_rifle_556: {
+    name:"5.56 Assault Rifle",
+    desc:"Service rifle. +12 ATK, +1% crit. Uses 5.56.",
+    slot:"weapon", bonus:{ atk:12, crit:0.01 },
+    ammo:{ id:"ammo_556", perShot:1 }
+  },
+
+  battle_rifle_762: {
+    name:"7.62 Battle Rifle",
+    desc:"Full-power thumper. +13 ATK, +1.5% crit. Uses 7.62.",
+    slot:"weapon", bonus:{ atk:13, crit:0.015 },
+    ammo:{ id:"ammo_762", perShot:1 }
+  },
+
+  marksman_rifle: {
+    name:"Marksman Rifle",
+    desc:"Scoped precision. +12 ATK, +7% crit. Uses .308.",
+    slot:"weapon", bonus:{ atk:12, crit:0.07 },
+    ammo:{ id:"ammo_308", perShot:1 }
+  },
+
+  lever_action_44: {
+    name:"Lever-Action .44",
+    desc:"Classic punch. +11 ATK, +4% crit. Uses .44 Magnum.",
+    slot:"weapon", bonus:{ atk:11, crit:0.04 },
+    ammo:{ id:"ammo_44", perShot:1 }
+  },
+
+  machine_pistol_38: {
+    name:"Machine Pistol",
+    desc:"Snappy sidearm. +6 ATK, +2% crit. Uses .38.",
+    slot:"weapon", bonus:{ atk:6, crit:0.02 },
+    ammo:{ id:"ammo_38", perShot:1 }
+  },
+
+  laser_pistol: {
+    name:"Laser Pistol",
+    desc:"Clean shots, no drop. +9 ATK, +3% crit. Uses Energy Cells.",
+    slot:"weapon", bonus:{ atk:9, crit:0.03 },
+    ammo:{ id:"energy_cell", perShot:1 }
+  },
+
+  laser_rifle: {
+    name:"Laser Rifle",
+    desc:"Beam-line precision. +11 ATK, +4% crit. Uses Energy Cells.",
+    slot:"weapon", bonus:{ atk:11, crit:0.04 },
+    ammo:{ id:"energy_cell", perShot:1 }
   },
 
   med_patch: { 
@@ -455,13 +502,26 @@ const ITEMS = {
     }
   },
 
+//////// === Melee weappons 
+
   scrap_blade: {
     name:"Scrap Blade",
     desc:"A crude melee weapon. Increases combat effectiveness.",
     slot:"weapon",
     bonus:{ atk:5 },
     use:()=>{ equipItem("scrap_blade"); return false; }
-  }
+  },
+
+machete: {
+    name:"Machete",
+    desc:"Chopped and ready. +7 ATK.",
+    slot:"weapon", bonus:{ atk:7 }
+  },
+  sledgehammer: {
+    name:"Sledgehammer",
+    desc:"Hefty bruiser. +12 ATK, -1 AGI.",
+    slot:"weapon", bonus:{ atk:12, agi:-1 }
+  },
 };
 
 
@@ -665,14 +725,23 @@ function countItem(id){
 function removeItem(id, qty = 1){
   id = slugify(id);
   qty = Math.max(1, Number(qty) || 1);
+
+  // Get current stack (this call is fine; it sanitizes once up front)
   const it = findStack(id);
   if (!it) return false;
+
   it.qty -= qty;
-  if (it.qty <= 0){
-    state.inventory = inv().filter(s => s !== it);
-  }
+
+  if (it.qty > 0) return true;
+
+  // Remove the stack entirely by id (no inv() call here)
+  state.inventory = Array.isArray(state.inventory)
+    ? state.inventory.filter(s => !(s && typeof s === "object" && s.id === id))
+    : [];
+
   return true;
 }
+
 
 // req shape: { itemId: quantity, caps?: number }
 function hasItems(req){
@@ -717,6 +786,76 @@ function craft(recipeId){
   log(`Crafted: ${r.name}.`);
   updateUI();
 }
+
+// ====== Ammo / Weapon helpers ======
+function equippedWeaponId(){
+  return state?.equipment?.weapon || null;
+}
+function equippedWeaponMeta(){
+  const w = equippedWeaponId();
+  return w ? ITEMS[w] : null;
+}
+function weaponUsesAmmo(meta){
+  return !!(meta && meta.ammo && meta.ammo.id);
+}
+function ammoCount(ammoId){
+  return countItem(ammoId);
+}
+function consumeAmmo(ammoId, n=1){
+  n = Math.max(1, Number(n) || 1);
+  if (countItem(ammoId) < n) return false; // don't partially consume
+  removeItem(ammoId, n);
+  return true;
+}
+
+/**
+ * Returns {atk, def, crit, agi} like calcStats(), but with weapon bonus excluded.
+ * Useful when a firearm is out of ammo (melee buttstroke / bash).
+ */
+function calcStatsWithoutWeapon(){
+  let atk = 0, def = 0, crit = 0, agi = 0;
+  for (const slot of Object.keys(state.equipment)){
+    const id = state.equipment[slot];
+    if(!id) continue;
+    if (slot === "weapon") continue; // skip weapon bonuses
+    const b = ITEMS[id]?.bonus;
+    if(!b) continue;
+    atk += b.atk || 0;
+    def += b.def || 0;
+    crit += b.crit || 0;
+    agi  += b.agi  || 0;
+  }
+  return { atk, def, crit, agi };
+}
+
+/**
+ * Convenience: compute temporary "current attack + crit" applying melee fallback
+ * if the equipped weapon is a gun with no ammo.
+ * Relies on global calcStats() you already have.
+ */
+function currentAttackAndCritWithAmmoGate(){
+  const base = calcStats(); // includes weapon bonus if any
+  const wMeta = equippedWeaponMeta();
+  if (!weaponUsesAmmo(wMeta)) {
+    return { atk: base.atk, crit: base.crit, usedAmmo:false, out:false, ammoName:null, perShot:0 };
+  }
+  const ammoId = wMeta.ammo.id;
+  const per = Math.max(1, Number(wMeta.ammo.perShot) || 1);
+  const have = ammoCount(ammoId);
+
+  if (have >= per){
+    // We will consume ammo; caller should actually remove it on successful attack
+    return { atk: base.atk, crit: base.crit, usedAmmo:true, out:false, ammoName:ITEMS[ammoId]?.name||ammoId, perShot:per, ammoId };
+  } else {
+    // Out of ammo → melee fallback (strip weapon's bonus)
+    const wAtk  = (wMeta.bonus?.atk || 0);
+    const wCrit = (wMeta.bonus?.crit || 0);
+    const fallbackAtk  = Math.max(0, base.atk - wAtk);
+    const fallbackCrit = Math.max(0, base.crit - wCrit);
+    return { atk: fallbackAtk, crit: fallbackCrit, usedAmmo:false, out:true, ammoName:ITEMS[ammoId]?.name||ammoId, perShot:per, ammoId };
+  }
+}
+
 
 
 
@@ -818,11 +957,11 @@ function newRun() {
     equipment: { head:null, chest:null, legs:null, weapon:null },
     battlesWon: 0,
     battlesLost: 0,
-    buffs: { radShield:0, fleeBoost:0, atkBoost:0, strEnd:0, percInt:0 },
+    buffs: { radShield:{turns:0}, fleeBoost:0, atkBoost:0, strEnd:0, percInt:0 },
   };
 
   log(`You begin at age 18...`);
-  log(`Your S.P.E.C.I.A.L.: ${SPECIAL_KEYS.map(k=>k+":"+state.special[k]).join(" ")}`, "muted");
+  log(`Your S.P.E.C.I.A.L.: ${SPECIAL_KEYS.map(k => k + ":" + state.special[k]).join(" ")}`, "muted");
   updateUI();
 }
 
@@ -1239,7 +1378,7 @@ function evt_firstJob(){
 function evt_workAccident(){
   setChoice("A workplace mishap occurs.", [
     { label:"React fast (A check)", run:()=>{ if (skillCheck("A",12)){ log("You prevent injury. XP +10."); gainXP(10);} else { damage(10); log("You get hurt. HP -10."); } } },
-    { label:"Shield others (Karma +3)", run:()=>{ changeKarma(+3); (6); gainXP(8); log("You protect coworkers."); } }
+    { label:"Shield others (Karma +3)", run:()=>{ changeKarma(+3); damage(6); gainXP(8); log("You protect coworkers."); } }
   ]);
 }
 
@@ -1997,12 +2136,13 @@ function explore(){
     gainXP(8);
   }
   // common junk find
-  else if (roll > 75){
-    const n = rnd(1,3);                 // <-- FIX: need min & max
+    else if (roll > 75){
+    const n = rnd(1, 3); // make sure rnd is inclusive
+    // If your rnd is exclusive, use: Math.floor(Math.random()*3)+1
     addItem("junk", n);
     log(`You scavenge useful junk. +${n} junk.`);
     gainXP(6);
-  }
+   }
   // barter scrap for caps (no items)
   else if (roll > 55){
     const amt = money(0.8);
@@ -2558,14 +2698,44 @@ $("#modal-backdrop").addEventListener("click", e=>{
   if (e.target.id==="modal-backdrop") closeModal();
 });
 
+/* ========= Combat Helpers ========= */
+
+// e.g. chance(0.3) or chance(30)
+function chance(p){ if (p > 1) p = p / 100; return Math.random() < p; }
+
+function maybeStartCombat(prob = 0.3, tier = "wastes", source = "misc"){
+  if (Math.random() < prob){
+    const enemy = generateEnemy(tier || "wastes");
+    openCombat(enemy, { source });
+    return true;
+  }
+  return false;
+}
+
+function playerBattleStats(){
+  const S  = state.special || {S:5,P:5,E:5,C:5,I:5,A:5,L:5};
+  const eq = calcStats();
+
+  let atk  = 2 + Math.floor(S.S/2) + Math.floor(S.P/4) + Math.floor(state.level/2);
+  let def  = Math.floor(S.E/2) + Math.floor(S.A/4) + (eq.def || 0);
+  let spd  = 8 + S.A + Math.floor(state.level/3) + (eq.agi || 0);
+  let crit = clamp(0.03 + (S.L * 0.005) + (eq.crit || 0), 0, 0.5);
+
+  const turns = v => (typeof v === "object" ? (v?.turns||0) : (v||0));
+  if (turns(state.buffs?.strEnd)  > 0) { atk += 1; def += 1; }
+  if (turns(state.buffs?.percInt) > 0) { crit += 0.01; }
+
+  return { atk, def, spd, crit };
+}
+
 /* ========= Turn-Based Combat ========= */
 // openCombat(enemy, { source })
-function openCombat(enemy, ctx={}) {
+function openCombat(enemy, ctx = {}) {
   const m = openModal("Encounter");
   let turn = 1;
   let logBox, enemyHPFill, playerHPFill;
 
-  // Snapshot player battle stats each round (speed can shift with status later if you add it)
+  // Snapshot player battle stats each round
   const pstats = () => playerBattleStats();
   const enemyStats = { atk: enemy.atk, def: enemy.def, spd: enemy.spd };
 
@@ -2576,30 +2746,34 @@ function openCombat(enemy, ctx={}) {
   m.content.append(hud);
 
   // Enemy bar
-  const eRow = el("div","kv");
+  const eRow = el("div", "kv");
   eRow.append(el("div", null, enemy.name));
-  const eBar = el("div","bar"); enemyHPFill = el("i"); eBar.append(enemyHPFill);
+  const eBar = el("div", "bar");
+  enemyHPFill = el("i");
+  eBar.append(enemyHPFill);
   eRow.append(eBar);
   m.content.append(eRow);
 
   // Player bar
-  const pRow = el("div","kv");
+  const pRow = el("div", "kv");
   pRow.append(el("div", null, state.name));
-  const pBar = el("div","bar"); playerHPFill = el("i"); pBar.append(playerHPFill);
+  const pBar = el("div", "bar");
+  playerHPFill = el("i");
+  pBar.append(playerHPFill);
   pRow.append(pBar);
-  m.content.append(pRow, el("div","hr"));
+  m.content.append(pRow, el("div", "hr"));
 
   // Log
   logBox = el("div");
   m.content.append(logBox);
 
   // Actions
-  const actionRow = el("div","kv");
+  const actionRow = el("div", "kv");
   actionRow.append(el("div", null, "Actions"));
   const buttonsBox = el("div");
-  const btnAttack = el("button","choice","Attack");
-  const btnItem   = el("button","choice","Item");
-  const btnFlee   = el("button","choice","Flee");
+  const btnAttack = el("button", "choice", "Attack");
+  const btnItem   = el("button", "choice", "Item");
+  const btnFlee   = el("button", "choice", "Flee");
   buttonsBox.append(btnAttack, btnItem, btnFlee);
   actionRow.append(buttonsBox);
   m.content.append(actionRow);
@@ -2608,40 +2782,43 @@ function openCombat(enemy, ctx={}) {
   const itemBox = el("div");
   m.content.append(itemBox);
 
-  function uiLog(t){ const p = el("p", null, t); logBox.append(p); logBox.scrollTop = logBox.scrollHeight; }
-  function refreshBars(){
-    // enemy
+  function uiLog(t) {
+    const p = el("p", null, t);
+    logBox.append(p);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function refreshBars() {
     const ePct = Math.max(0, Math.round((enemy.curHP / enemy.hp) * 100));
     enemyHPFill.style.width = ePct + "%";
-    // player
     const pPct = Math.max(0, Math.round((state.hp / state.hpMax) * 100));
     playerHPFill.style.width = pPct + "%";
   }
 
-function dmgCalc(attackerAtk, defenderDef, critChance=0.05){
-  let raw = attackerAtk + roll(6) - 3;
-  const K = 25; // bigger K = weaker armor
-  const mult = 1 - (defenderDef / (defenderDef + K));
-  let amount = Math.max(1, Math.round(raw * mult));
-  let crit = false;
-  if (Math.random() < critChance){ amount = Math.round(amount * 1.5); crit = true; }
-  return { amount, crit };
+  function dmgCalc(attackerAtk, defenderDef, critChance = 0.05) {
+    let raw = attackerAtk + rnd(1, 6) - 3;
+    const K = 25; // bigger K = weaker armor
+    const mult = 1 - (defenderDef / (defenderDef + K));
+    let amount = Math.max(1, Math.round(raw * mult));
+    let crit = false;
+    if (Math.random() < critChance) {
+      amount = Math.round(amount * 1.5);
+      crit = true;
+    }
+    return { amount, crit };
   }
 
-  function endCombat(victory){
-    // disable actions
+  function endCombat(victory) {
     [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = true);
 
-    if (victory){
+    if (victory) {
       state.battlesWon++;
-      // Rewards: base + small random spice, with perk adjustments done in grantBattleRewards
       const reward = { ...enemy.reward };
-      // 10% drop chances (example)
-      if (chance(0.10)) reward.items = { ...(reward.items||{}), food: 1 };
-      if (chance(0.08)) reward.items = { ...(reward.items||{}), duct_tape: (reward.items?.duct_tape||0)+1 };
+      if (chance(0.10)) reward.items = { ...(reward.items || {}), food: 1 };
+      if (chance(0.08)) reward.items = { ...(reward.items || {}), duct_tape: (reward.items?.duct_tape || 0) + 1 };
       grantBattleRewards(reward);
 
-      uiLog(`Victory! +${reward.xp||0} XP, +${reward.caps||0} caps${reward.items? " (loot gained)" : ""}.`);
+      uiLog(`Victory! +${reward.xp || 0} XP, +${reward.caps || 0} caps${reward.items ? " (loot gained)" : ""}.`);
       log(`Defeated ${enemy.name}.`);
       updateUI();
     } else {
@@ -2653,12 +2830,12 @@ function dmgCalc(attackerAtk, defenderDef, critChance=0.05){
     tickBuffs("combat");
   }
 
-  function enemyTurn(){
+  function enemyTurn() {
     if (enemy.curHP <= 0) return;
     const { def } = pstats();
     const result = dmgCalc(enemyStats.atk, def, 0.05);
     damage(result.amount);
-    uiLog(`${enemy.name} hits you for ${result.amount}${result.crit? " (CRIT!)" : ""}.`);
+    uiLog(`${enemy.name} hits you for ${result.amount}${result.crit ? " (CRIT!)" : ""}.`);
     refreshBars();
     if (state.hp <= 0) {
       uiLog("You collapse!");
@@ -2668,98 +2845,145 @@ function dmgCalc(attackerAtk, defenderDef, critChance=0.05){
     return false;
   }
 
-  function playerTurn(){
-    // re-enable
+  function playerTurn() {
     [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = false);
   }
 
-  // Action: Attack
+  // ---- Attack (ammo-aware) ----
   btnAttack.onclick = () => {
     [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = true);
-    const { atk, crit } = pstats();
-    const result = dmgCalc(atk, enemyStats.def, pstats().crit);
+
+    const gate = currentAttackAndCritWithAmmoGate();
+
+    // Consume ammo when applicable
+    if (gate.usedAmmo && gate.perShot > 0 && gate.ammoId) {
+      const ok = consumeAmmo(gate.ammoId, gate.perShot);
+      if (!ok) {
+        uiLog(`*Click.* Out of ammo (${gate.ammoName}). You swing your weapon!`);
+      } else {
+        uiLog(`[${gate.ammoName} -${gate.perShot}]`);
+      }
+    }
+
+    if (gate.out) {
+      uiLog(`*Click.* Out of ammo (${gate.ammoName}). You strike with a melee bash!`);
+    }
+
+    // Use gated values to avoid double-counting gear/weapon
+    const ps = playerBattleStats();
+    const atkBoostActive = (state.buffs?.atkBoost && (state.buffs.atkBoost.turns || state.buffs.atkBoost) > 0);
+
+    const baseAtk  = (gate.atk  != null ? gate.atk  : ps.atk);
+    const baseCrit = (gate.crit != null ? gate.crit : ps.crit);
+
+    const totalAtk  = Math.max(1, baseAtk + (atkBoostActive ? 4 : 0));
+    const totalCrit = clamp(baseCrit, 0, 0.5);
+
+    const result = dmgCalc(totalAtk, enemyStats.def, totalCrit);
+
+    // Apply damage to enemy
     enemy.curHP = Math.max(0, enemy.curHP - result.amount);
-    uiLog(`You strike for ${result.amount}${result.crit? " (CRIT!)" : ""}.`);
+    uiLog(`You hit ${enemy.name} for ${result.amount}${result.crit ? " (CRIT!)" : ""}.`);
     refreshBars();
 
-    if (enemy.curHP <= 0){
-      uiLog(`The ${enemy.name} goes down.`);
+    if (enemy.curHP <= 0) {
+      uiLog(`${enemy.name} collapses!`);
       endCombat(true);
       return;
     }
 
     // enemy retaliates
-    setTimeout(()=>{
+    setTimeout(() => {
       const ended = enemyTurn();
       if (!ended) playerTurn();
     }, 150);
   };
 
-  // Action: Item (usable combat items from inventory)
+  // ---- Item (usable combat items from inventory) ----
   btnItem.onclick = () => {
     itemBox.innerHTML = "";
     migrateInventoryShape();
     const usable = inv().filter(s => ITEMS[s.id]?.use);
-    if (!usable.length){
-      itemBox.append(el("p","small muted","(No usable items)"));
+    if (!usable.length) {
+      itemBox.append(el("p", "small muted", "(No usable items)"));
       return;
     }
-    usable.forEach(s=>{
+    usable.forEach(s => {
       const meta = ITEMS[s.id];
-      const b = el("button","choice", `${meta.name} ×${s.qty}`);
+      const b = el("button", "choice", `${meta.name} ×${s.qty}`);
       b.onclick = () => {
-        // call existing useItem logic (heals/rad etc.)
-        const consumed = useItem(s.id); // may be false if equip-only; our meta.use returns boolean
+        const consumed = useItem(s.id);
         uiLog(`You use ${meta.name}.`);
         refreshBars();
         itemBox.innerHTML = "";
 
-        // enemy gets a turn after item use
-        setTimeout(()=>{
+        setTimeout(() => {
           const ended = enemyTurn();
           if (!ended) playerTurn();
         }, 150);
       };
-      itemBox.append(b, el("span","small muted"," "));
+      itemBox.append(b, el("span", "small muted", " "));
     });
   };
 
-  // Action: Flee
-  btnFlee.onclick = () => {
-    [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = true);
-    const ps = pstats();
-    let fleeBonus = state.perks.includes("swift") ? 1.15 : 1.0;
-    if (state.buffs?.fleeBoost > 0) fleeBonus *= 1.25;
-    const fleeChance = Math.min(0.85, 0.35 + ((ps.spd - enemyStats.spd) * 0.03)) * fleeBonus;
-    if (chance(fleeChance)){
-      uiLog("You slip away!");
-      log(`You fled from ${enemy.name}.`);
-      updateUI();
-      closeModal();
-      return;
-    } else {
-      uiLog("You fail to escape!");
-      setTimeout(()=>{
-        const ended = enemyTurn();
-        if (!ended) playerTurn();
-      }, 150);
-    }
-    tickBuffs("combat");
-  };
+// ---- Flee (close encounter, show simple "Escaped" popup) ----
+btnFlee.onclick = () => {
+  [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = true);
 
-  // Determine initiative (first turn) by speed
-  const firstPlayer = pstats().spd >= enemyStats.spd;
-  refreshBars();
-  uiLog(`A wild ${enemy.name} appears!`);
-  if (firstPlayer){
-    uiLog("You act first.");
-    playerTurn();
-  } else {
-    uiLog(`${enemy.name} moves first!`);
+  const ps = pstats();
+  const pSpd = Number(ps?.spd ?? 0);
+  const eSpd = Number(enemyStats?.spd ?? 0);
+
+  // Base flee chance: 35% + 3% per point of speed advantage
+  let base = 0.35 + ((pSpd - eSpd) * 0.03);
+
+  // Perk/buff checks guarded so they don't throw
+  if (Array.isArray(state?.perks) && state.perks.includes("swift")) base += 0.10; // +10% Swift
+  if ((state?.buffs?.fleeBoost ?? 0) > 0)                          base += 0.15; // +15% Stealth Field, etc.
+
+  // Clamp and sanitize
+  const fleeChance = clamp(isFinite(base) ? base : 0.35, 0.10, 0.90); // never 0% / 100%
+
+  if (Math.random() < fleeChance) {
+    // Game state + log
+    uiLog("You slip away!");
+    log(`You fled from ${enemy.name}.`);
+    updateUI();
+    tickBuffs("combat");
+
+    // Close the encounter, then show a minimal confirmation modal
+    closeModal();
+    setTimeout(() => {
+      const mm = openModal("Escaped");
+      const msg = el("p", null, "You slip away.");
+      msg.style.textAlign = "center";
+      msg.style.fontSize = "1.15rem";
+      msg.style.margin = "18px 0 12px";
+
+      const ok = el("button", "choice", "Close");
+      ok.style.display = "block";
+      ok.style.margin = "0 auto";
+      ok.onclick = closeModal;
+
+      mm.content.append(msg, ok);
+    }, 0);
+    return;
+  }
+
+  // Fail to flee → enemy acts, then your turn resumes
+  uiLog("You fail to escape!");
+  setTimeout(() => {
     const ended = enemyTurn();
     if (!ended) playerTurn();
-  }
+    tickBuffs("combat"); // tick after enemy’s turn on failure
+  }, 150);
+};
+
+// ✅ Make sure this brace exists to close openCombat(...)
 }
+
+
+
 
 /* ========= Save/Load ========= */
 // NOTE: Saves state into localStorage
@@ -2791,7 +3015,12 @@ function load(){
     if (typeof state.factionRep !== "number") state.factionRep = 0;
     if (!Array.isArray(state.perks)) state.perks = [];
     if (!Array.isArray(state.log)) state.log = [];
-    if (!state.buffs) state.buffs = { radShield:0, fleeBoost:0, atkBoost:0, strEnd:0, percInt:0 };
+    if (!state.buffs) state.buffs = { radShield:{turns:0}, fleeBoost:0, atkBoost:0, strEnd:0, percInt:0 };
+    // migrate very old saves that used a number
+    if (typeof state.buffs.radShield === "number") {
+    state.buffs.radShield = { turns: Number(state.buffs.radShield) || 0 };
+}
+
 
 
     // migrate any old inventory formats
@@ -2873,7 +3102,9 @@ function die(){
 
 /* ========= Trade / Barter ========= */
 // Base buy prices (caps) — tweak freely
+// Base buy prices (caps) — tweak freely
 const TRADE_BASE = {
+  // Consumables & misc
   food: 6,
   med_patch: 18,
   antirad: 24,
@@ -2881,55 +3112,136 @@ const TRADE_BASE = {
   duct_tape: 7,
   junk: 4,
   canteen: 12,
-  knife: 45,
-  helmet: 30,
-  armor: 60,
-  boots: 24,
-  scrap_blade: 28,
-  holotape: 20, // also used by your sell shortcut
+  holotape: 20,
   rad_purge: 30,
   rad_shield: 26,
   battle_tonic: 22,
   bulk_tonic: 24,
   focus_pills: 20,
   stealth_field: 34,
+
+  // Armor / clothing
+  helmet: 30,
+  armor: 60,
+  boots: 24,
+  settlers_coat: 80,
+  diplomats_coat: 70,
+
+  // Melee
+  knife: 45,
+  scrap_blade: 28,
+  machete: 28,
+  sledgehammer: 60,
+
+  // Firearms (existing)
   revolver: 60,
+  shotgun: 75,
   hunting_rifle: 85,
-  shotgun: 75
+
+  // Firearms (new)
+  pipe_pistol: 30,
+  smg_9mm: 75,
+  assault_rifle_556: 100,
+  battle_rifle_762: 120,
+  marksman_rifle: 110,
+  lever_action_44: 95,
+  machine_pistol_38: 55,
+  laser_pistol: 95,
+  laser_rifle: 135,
+  settlers_carbine: 90,
+
+  // Ammo
+  ammo_38: 4,
+  ammo_9mm: 5,
+  shells_12g: 6,
+  ammo_308: 10,
+  ammo_556: 8,
+  ammo_762: 9,
+  ammo_44: 12,
+  carbine_round: 7,
+  energy_cell: 14
 };
+
 
 // Vendor stock generator (called per visit)
 function genVendorStock(kind="Trader"){
   // id -> qty
   const stock = {};
   const put = (id, q)=>{ stock[slugify(id)] = (stock[slugify(id)]||0) + q; };
+  const roll = (pct)=> rnd(1,100) <= pct;
 
-  // core consumables
-  put("food", rnd(2,6));
-  put("med_patch", rnd(1,3));
-  put("antirad", rnd(1,2));
-  put("duct_tape", rnd(1,4));
-  put("junk", rnd(2,6));
-  if (rnd(1,100) > 70) put("rad_purge", rnd(1,2));
-  if (rnd(1,100) > 72) put("rad_shield", 1);
-  if (rnd(1,100) > 68) put("battle_tonic", rnd(1,2));
-  if (rnd(1,100) > 68) put("bulk_tonic", rnd(1,2));
-  if (rnd(1,100) > 68) put("focus_pills", rnd(1,2));
-  if (rnd(1,100) > 74) put("stealth_field", 1);
+  // ===== Core consumables (always some)
+  put("food",        rnd(2,6));
+  put("med_patch",   rnd(1,3));
+  put("antirad",     rnd(1,2));
+  put("duct_tape",   rnd(1,4));
+  put("junk",        rnd(2,6));
+  if (roll(35)) put("rad_purge",    rnd(1,2));
+  if (roll(30)) put("rad_shield",   1);
+  if (roll(35)) put("battle_tonic", rnd(1,2));
+  if (roll(35)) put("bulk_tonic",   rnd(1,2));
+  if (roll(35)) put("focus_pills",  rnd(1,2));
+  if (roll(25)) put("stealth_field",1);
+  if (roll(35)) put("water_filter", 1);
+  if (roll(40)) put("canteen",      1);
 
-  // gear (sometimes)
-  if (rnd(1,100) > 65) put("knife", 1);
-  if (rnd(1,100) > 70) put("helmet", 1);
-  if (rnd(1,100) > 75) put("boots", 1);
-  if (rnd(1,100) > 80) put("armor", 1);
-  if (rnd(1,100) > 78) put("water_filter", 1);
-  if (rnd(1,100) > 78) put("revolver", 1);
-  if (rnd(1,100) > 82) put("shotgun", 1);
-  if (rnd(1,100) > 85) put("hunting_rifle", 1);
+  // ===== Armor / clothing (sometimes)
+  if (roll(45)) put("helmet", 1);
+  if (roll(35)) put("boots",  1);
+  if (roll(30)) put("armor",  1);
 
-  // faction flavored discount later; stock is same
-  return { kind, stock, haggleCut: 0, visitedYear: state.year };
+  // Faction gear (rare)
+  if (roll(10)) put("settlers_coat",   1);
+  if (roll(10)) put("diplomats_coat",  1);
+
+  // ===== Melee (common-ish)
+  if (roll(55)) put("knife",        1);
+  if (roll(45)) put("scrap_blade",  1);
+  if (roll(40)) put("machete",      1);
+  if (roll(30)) put("sledgehammer", 1);
+
+  // ===== Firearms (rarity tiers)
+  // basic
+  if (roll(45)) put("pipe_pistol", 1);
+  if (roll(35)) put("revolver",    1);
+  if (roll(30)) put("shotgun",     1);
+  if (roll(28)) put("hunting_rifle", 1);
+
+  // mid
+  if (roll(25)) put("machine_pistol_38", 1);
+  if (roll(22)) put("smg_9mm",           1);
+  if (roll(20)) put("assault_rifle_556", 1);
+  if (roll(18)) put("marksman_rifle",    1);
+  if (roll(16)) put("settlers_carbine",  1);
+
+  // high-end
+  if (roll(14)) put("battle_rifle_762",  1);
+  if (roll(14)) put("lever_action_44",   1);
+  if (roll(12)) put("laser_pistol",      1);
+  if (roll(10)) put("laser_rifle",       1);
+
+  // ===== Ammo (more plentiful)
+  const ammoLots = [
+    ["ammo_38",      [6,18]],
+    ["ammo_9mm",     [6,18]],
+    ["shells_12g",   [4,12]],
+    ["ammo_308",     [4,10]],
+    ["ammo_556",     [6,16]],
+    ["ammo_762",     [5,14]],
+    ["ammo_44",      [3,10]],
+    ["carbine_round",[6,16]],
+    ["energy_cell",  [3,9]]
+  ];
+  ammoLots.forEach(([id, [a,b]])=>{
+    if (roll(75)) put(id, rnd(a,b));
+  });
+
+  // Occasional curios
+  if (roll(25)) put("holotape", rnd(1,2));
+
+  return { kind, stock, haggleCut: 0, visitedYear: state.year, sessionId: rnd(10000,99999) };
 }
+
 
 // Price calculator with Charisma/perk/faction/haggle
 function tradePrice(id, mode, vendor){
