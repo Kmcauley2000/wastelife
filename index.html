@@ -3009,115 +3009,246 @@ window.addEventListener("DOMContentLoaded", () => {
   $("#faction-pill-wrapper").onclick = openJoinFaction;
 });
 
-/* ====== TEXT MAP + Wilderness Integration =============================== */
+/* ====== TEXT MAP + Wilderness Integration (fixed) ======================= */
 (function(){
-if (window.WL_TextMap) return;
+  if (window.WL_TextMap) return; // keep only one copy
 
-/* --- Data --- */
-const WORLD=[
- {id:"dustford",name:"Dustford",type:"town",desc:"Hardy town around a recycler."},
- {id:"ironwood",name:"Ironwood",type:"town",desc:"Frontier town by foundry + pines."},
- {id:"dunes",name:"Wasteland Dunes",type:"wild",desc:"Scrub dunes. Storms hit."},
- {id:"ruins",name:"Cracked Ruins",type:"wild",desc:"Collapsed towers, salvage, rads."},
- {id:"flats",name:"Salt Flats",type:"wild",desc:"White wastes, smugglers run."},
- {id:"canyon",name:"Red Canyons",type:"wild",desc:"Tight passes, raiders."},
- {id:"swamp",name:"Irrad. Swamp",type:"wild",desc:"Glowing mire, vicious biters."}
-];
-const TOWNS={ /* your town buildings same as before */ 
-  dustford:[/* ... */],ironwood:[/* ... */]
-};
-/* wilderness config */
-const WILD={
- dunes:{rad:0,ch:0.32,loot:[["junk",6],["duct_tape",3],["canteen",1],["food",2]],enemies:["sand_stalker","burrower_beetle","dune_scorpion"]},
- ruins:{rad:2,ch:0.38,loot:[["junk",5],["duct_tape",4],["holotape",1],["energy_cell",2]],enemies:["feral","rebar_scavver","auto_turret_mk1"]},
- flats:{rad:1,ch:0.28,loot:[["junk",4],["water_filter",1],["caps",2],["food",2]],enemies:["brine_tortoise","flat_wraith","smuggler_skiff"]},
- canyon:{rad:0,ch:0.35,loot:[["junk",3],["ammo_38",2],["shells_12g",1]],enemies:["cliff_raptor","rock_viper","marauder_lookout"]},
- swamp:{rad:3,ch:0.40,loot:[["junk",3],["food",2],["antirad",2]],enemies:["bog_snapper","glow_mireling","skeeter_swarm"]}
-};
+  /* --- Data --- */
+  const WORLD = [
+    { id:"dustford", name:"Dustford",        type:"town", desc:"Hardy town around a recycler." },
+    { id:"ironwood", name:"Ironwood",        type:"town", desc:"Frontier town by foundry + pines." },
+    { id:"dunes",    name:"Wasteland Dunes", type:"wild", desc:"Scrub dunes. Storms hit." },
+    { id:"ruins",    name:"Cracked Ruins",   type:"wild", desc:"Collapsed towers, salvage, rads." },
+    { id:"flats",    name:"Salt Flats",      type:"wild", desc:"White wastes, smugglers run." },
+    { id:"canyon",   name:"Red Canyons",     type:"wild", desc:"Tight passes, raiders." },
+    { id:"swamp",    name:"Irrad. Swamp",    type:"wild", desc:"Glowing mire, vicious biters." },
+  ];
+  const TOWNS = { dustford:[], ironwood:[] }; // stub buildings
 
-/* --- Sidebar button --- */
-function ensureBtn(){if($("#btn-map"))return;const b=ce("button");b.id="btn-map";b.textContent="Travel / Map";b.onclick=openWorld;$(".actions .group").appendChild(b);}
-function openWorld(){const m=openModal("World Travel"),c=m.content;const here=state.location||"Unknown";c.append(pSmall("You are at: "+here),hr());
- c.append(section("Towns"),...WORLD.filter(n=>n.type=="town").map(worldRow));
- c.append(section("Wilderness"),...WORLD.filter(n=>n.type!="town").map(worldRow));
+  /* Wilderness config */
+  const WILD = {
+    dunes:  { rad:0, ch:0.32, loot:[["junk",6],["duct_tape",3],["canteen",1],["food",2]], enemies:["sand_stalker","burrower_beetle","dune_scorpion"] },
+    ruins:  { rad:2, ch:0.38, loot:[["junk",5],["duct_tape",4],["holotape",1],["energy_cell",2]], enemies:["feral","rebar_scavver","auto_turret_mk1"] },
+    flats:  { rad:1, ch:0.28, loot:[["junk",4],["water_filter",1],["caps",2],["food",2]], enemies:["brine_tortoise","flat_wraith","smuggler_skiff"] },
+    canyon: { rad:0, ch:0.35, loot:[["junk",3],["ammo_38",2],["shells_12g",1]], enemies:["cliff_raptor","rock_viper","marauder_lookout"] },
+    swamp:  { rad:3, ch:0.40, loot:[["junk",3],["food",2],["antirad",2]], enemies:["bog_snapper","glow_mireling","skeeter_swarm"] },
+  };
+
+  /* --- Sidebar button --- */
+  function $(s){ return document.querySelector(s); }
+  function ensureMapBtn(){
+    if ($("#btn-map")) return;
+    const b = document.createElement("button");
+    b.id = "btn-map";
+    b.textContent = "Travel / Map";
+    b.onclick = openWorld;
+    (document.querySelector(".actions .group") || $(".actions") || document.body).appendChild(b);
+  }
+
+function openWorld(){
+  const m = openModal("World Travel"), c = m.content;
+  const here = state.location || "Unknown";
+
+  // clear + header
+  c.innerHTML = "";
+  c.append(pSmall("You are at: " + here), hr());
+
+  // towns
+  c.append(section("Towns"));
+  WORLD.filter(n => n.type === "town").forEach(n => c.append(worldRow(n)));
+
+  // wilderness
+  c.append(section("Wilderness"));
+  WORLD.filter(n => n.type !== "town").forEach(n => c.append(worldRow(n)));
 }
-function section(t){const d=ce("div");d.className="title";d.textContent=t;return d;}
-function tag(t){const s=ce("span");s.className="pill";s.textContent=t;return s;}
-function worldRow(n){const r=kv();r.left.textContent=n.name;r.right.append(pSmall(n.desc));
- if(state.location===n.name)r.left.appendChild(tag("here"));
- const go=choice(state.location===n.name?"—":"Travel");go.disabled=(state.location===n.name);go.onclick=()=>travelTo(n.id);r.right.append(go);return r.wrap;}
 
-/* --- Travel + region set --- */
-function travelTo(id){const n=WORLD.find(x=>x.id===id);if(!n)return;
- if(maybeStartCombat&&maybeStartCombat(n.type==="town"?0.15:0.3,"wastes","travel")){closeModal();return;}
- state.location=n.name;state.region=(n.type==="wild")?n.id:null;
- log("You travel to "+n.name+".");updateUI();closeModal();}
+// ADD this tiny helper anywhere near your other helpers:
+function section(titleText){
+  const d = document.createElement("div");
+  d.className = "title";
+  d.textContent = titleText;
+  return d;
+}
+  function worldRow(n){
+    const r = kv();
+    r.left.textContent = n.name;
+    r.right.append(pSmall(n.desc));
+    if (state.location === n.name) r.left.appendChild(tag("here"));
+    const go = choice(state.location === n.name ? "—" : "Travel");
+    go.disabled = (state.location === n.name);
+    go.onclick = () => travelTo(n.id);
+    r.right.append(go);
+    return r.wrap;
+  }
 
-/* --- Explore override for wilderness --- */
-window.exploreCurrentRegion=function(){
- const id=state.region,r=WILD[id];if(!r){log("Nothing special to explore here.");return;}
- if(r.rad)rad(r.rad);
- if(Math.random()<r.ch){openCombat(genEnemy(id));return;}
- const l=roll(r.loot);if(!l){log("Nothing found.");return;}
- if(l==="caps"){const amt=rnd(3,12);addCaps(amt);log("Found "+amt+" caps.");}
- else{addItem(l,1);log("Scavenged "+(ITEMS[l]?.name||l));}
-};
-function roll(tab){if(!tab)return null;let tot=tab.reduce((s,[,w])=>s+w,0),r=Math.random()*tot;for(const [id,w] of tab){if((r-=w)<=0)return id;}return null;}
-function genEnemy(region){const pool=WILD[region]?.enemies||[];const id=pool[rnd(0,pool.length-1)];const e=ENEMIES.find(x=>x.id===id)||ENEMIES[0];return {...e,curHP:e.hp};}
+  /* --- Travel + region set --- */
+  function travelTo(id){
+    const n = WORLD.find(x => x.id === id); if (!n) return;
+    if (typeof maybeStartCombat === "function" && maybeStartCombat(n.type==="town" ? 0.15 : 0.30, "wastes", "travel")) {
+      closeModal(); return;
+    }
+    state.location = n.name;
+    state.region   = (n.type === "wild") ? n.id : null;
+    log("You travel to " + n.name + ".");
+    updateUI();
+    closeModal();
+  }
 
-/* --- helpers --- */
-function kv(){const w=ce("div");w.className="kv";const a=ce("div"),b=ce("div");w.append(a,b);return{wrap:w,left:a,right:b};}
-function choice(t){const b=ce("button");b.className="choice";b.textContent=t;return b;}
-function hr(){return ce("div",{className:"hr"});}
-function pSmall(t){const p=ce("p");p.className="small muted";p.textContent=t;return p;}
-function ce(tag,props={}){const e=document.createElement(tag);Object.assign(e,props);return e;}
-function $(s){return document.querySelector(s);}
+  /* --- Explore override for wilderness --- */
+  window.exploreCurrentRegion = function(){
+    const id = state.region, r = WILD[id];
+    if (!r){ log("Nothing special to explore here."); return; }
+    if (r.rad) rad(r.rad);
+    if (Math.random() < r.ch){ openCombat(genEnemy(id)); return; }
+    const l = roll(r.loot); if (!l){ log("Nothing found."); return; }
+    if (l === "caps"){ const amt = rnd(3,12); addCaps(amt); log("Found "+amt+" caps."); }
+    else { addItem(l,1); log("Scavenged " + (ITEMS[l]?.name || l)); }
+  };
 
-ensureBtn();const u=window.updateUI;window.updateUI=function(){u&&u();ensureBtn();}
-window.WL_TextMap={world:WORLD,towns:TOWNS,openWorld,travelTo};
+  /* --- Helpers --- */
+  function roll(tab){ if(!tab) return null; let tot=tab.reduce((s,[,w])=>s+w,0), r=Math.random()*tot; for(const [id,w] of tab){ if((r-=w)<=0) return id; } return null; }
+  function genEnemy(region){
+    const pool = WILD[region]?.enemies || [];
+    const id   = pool[rnd(0, pool.length-1)];
+    const e    = ENEMIES.find(x => x.id === id) || ENEMIES[0];
+    return { ...e, curHP: e.hp }; // <-- fixed from `{.e,...}` bug
+  }
+
+  function kv(){ const w=document.createElement("div"); w.className="kv"; const a=document.createElement("div"), b=document.createElement("div"); w.append(a,b); return {wrap:w,left:a,right:b}; }
+  function choice(t){ const b=document.createElement("button"); b.className="choice"; b.textContent=t; return b; }
+  function hr(){ const d=document.createElement("div"); d.className="hr"; return d; }
+  function pSmall(t){ const p=document.createElement("p"); p.className="small muted"; p.textContent=t; return p; }
+  function tag(t){ const s=document.createElement("span"); s.className="pill"; s.textContent=t; return s; }
+
+  ensureMapBtn();
+  const _update = window.updateUI;
+  window.updateUI = function(){ _update && _update(); ensureMapBtn(); };
+
+  window.WL_TextMap = { world:WORLD, towns:TOWNS, openWorld, travelTo };
 })();
-
 </script>
-<!-- ==== WL Combat End Screen + openCombat override (FINAL, larger box, green skin) ==== -->
 <style>
-  :root{--wl-bg:rgba(0,0,0,.65);--wl-b:rgba(120,255,120,.18);--wl-b2:rgba(120,255,120,.12);--wl-t:#c6ffd0;--wl-m:#8fb090}
+  /* --- End-of-Battle Overlay — themed to Wastelife globals --- */
+  /* Uses your existing :root vars:
+     --bg --panel --accent --accent-dim --danger --warn --ok --text --muted --shadow --radius --mono --sans */
+
   /* Overlay + centering (hardened) */
-  #wl-combat-end{position:fixed!important;inset:0!important;display:none;align-items:center;justify-content:center;z-index:2147483647!important;background:var(--wl-bg)}
-  #wl-combat-end.wl-show{display:flex!important}
-  #wl-combat-end *{box-sizing:border-box}
+  #wl-combat-end{
+    position:fixed!important; inset:0!important;
+    display:none; align-items:center; justify-content:center;
+    z-index:2147483647!important;
+    background:rgba(0,0,0,.6); /* match .modal-backdrop */
+    font-family:var(--sans); color:var(--text);
+  }
+  #wl-combat-end.wl-show{ display:flex!important }
+  #wl-combat-end *{ box-sizing:border-box }
 
   /* Modal — larger */
   #wl-combat-end .wl-modal{
-    display:block!important;width:min(900px,98vw)!important;max-width:98vw;min-height:420px!important;
-    background:linear-gradient(180deg,#0c120c,#0a0f0a)!important;border:1px solid var(--wl-b)!important;
-    border-radius:18px!important;box-shadow:0 18px 40px rgba(0,0,0,.6)!important;color:var(--wl-t)
+    display:block!important;
+    width:min(900px,98vw)!important; max-width:98vw; min-height:420px!important;
+    background:var(--panel)!important;
+    border:1px solid rgba(227,143,43,.28)!important; /* accent border */
+    border-radius:var(--radius)!important;
+    box-shadow:var(--shadow)!important;
+    color:var(--text);
+    overflow:hidden;
   }
-  #wl-combat-end .wl-hdr{padding:28px!important;border-bottom:1px solid var(--wl-b2)!important;background:linear-gradient(180deg,#0e1510,#0b120c)!important;display:flex!important;gap:12px;align-items:center}
-  #wl-combat-end .wl-icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:800;background:#0d170e;border:1px solid var(--wl-b2);color:#8dff92}
-  #wl-combat-end .wl-ttl{margin:0;font-size:24px;color:var(--wl-t)}
-  #wl-combat-end .wl-sub{margin:4px 0 0;color:var(--wl-m);font-size:13px}
 
-  #wl-combat-end .wl-body{padding:32px!important}
-  #wl-combat-end .wl-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
-  #wl-combat-end .wl-card{background:#0a120a;border:1px solid var(--wl-b2);border-radius:14px;padding:20px}
-  #wl-combat-end .wl-card h4{margin:0 0 6px;font-size:13px;color:var(--wl-m)}
-  #wl-combat-end .wl-big{font-size:40px;font-weight:900;color:var(--wl-t)}
-  #wl-combat-end .wl-badge{padding:3px 8px;font-size:11px;border-radius:999px;background:#091108;border:1px solid var(--wl-b2);color:var(--wl-m)}
-  #wl-combat-end .wl-loot{display:flex;gap:8px;flex-wrap:wrap}
-  #wl-combat-end .wl-loot .wl-chip{font-size:12px;padding:6px 10px;background:#0a120a;border:1px solid var(--wl-b);border-radius:999px;color:var(--wl-t)}
-  #wl-combat-end .wl-note{margin-top:10px;font-size:12px;color:var(--wl-m)}
+  /* Header */
+  #wl-combat-end .wl-hdr{
+    padding:16px 18px!important;
+    border-bottom:1px solid rgba(227,143,43,.28)!important;
+    background:linear-gradient(180deg, rgba(26,21,18,1), rgba(26,21,18,.86))!important;
+    display:flex!important; gap:12px; align-items:center;
+  }
+  #wl-combat-end .wl-icon{
+    width:44px; height:44px; border-radius:12px;
+    display:grid; place-items:center; font-weight:800;
+    background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
+    border:1px solid rgba(227,143,43,.28);
+    color:var(--accent);
+    font-family:var(--mono);
+    text-shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+  #wl-combat-end .wl-ttl{
+    margin:0; font-size:20px;
+    font-family:var(--mono);
+    color:var(--accent);
+    letter-spacing:.5px;
+    text-shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+  #wl-combat-end .wl-sub{ margin:4px 0 0; color:var(--muted); font-size:13px }
 
-  #wl-combat-end .wl-actions{display:flex!important;justify-content:flex-end;gap:10px;padding:24px 32px 32px}
-  #wl-combat-end .wl-btn{all:unset;cursor:pointer;padding:16px 24px;border-radius:12px;border:1px solid rgba(120,255,120,.25);background:#0b120b;color:var(--wl-t);font-weight:800}
-  #wl-combat-end .wl-btn:hover{background:#0e170e}
-  #wl-combat-end .wl-btn.wl-primary{background:#0f1b10;border-color:rgba(120,255,120,.45)}
+  /* Body */
+  #wl-combat-end .wl-body{ padding:22px 22px 8px!important }
+  #wl-combat-end .wl-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px }
 
-  /* Outcome icons */
-  #wl-combat-end.wl-win .wl-icon{background:linear-gradient(180deg,#102713,#0b1a0f);color:#8dff92}
-  #wl-combat-end.wl-lose .wl-icon{background:linear-gradient(180deg,#281217,#1a0b0f);color:#ff8aa1}
-  #wl-combat-end.wl-flee .wl-icon{background:linear-gradient(180deg,#1a2a0f,#0f1b14);color:#d7ff9a}
+  /* Cards */
+  #wl-combat-end .wl-card{
+    background:linear-gradient(180deg, rgba(227,143,43,.06), rgba(0,0,0,.08));
+    border:1px solid rgba(227,143,43,.28);
+    border-radius:var(--radius);
+    padding:14px;
+  }
+  #wl-combat-end .wl-card h4{
+    margin:0 0 6px; font-size:12px; color:var(--muted); font-family:var(--mono)
+  }
+  #wl-combat-end .wl-big{ font-size:32px; font-weight:900; color:var(--text) }
+  #wl-combat-end .wl-badge{
+    padding:3px 8px; font-size:11px; border-radius:999px;
+    background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
+    border:1px solid rgba(227,143,43,.28);
+    color:var(--muted);
+    font-family:var(--mono);
+  }
 
-  @media(max-width:560px){#wl-combat-end .wl-grid{grid-template-columns:1fr}}
+  /* Loot chips */
+  #wl-combat-end .wl-loot{ display:flex; gap:8px; flex-wrap:wrap }
+  #wl-combat-end .wl-loot .wl-chip{
+    font-size:12px; padding:6px 10px; border-radius:999px;
+    background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
+    border:1px solid rgba(227,143,43,.35);
+    color:var(--text);
+    font-family:var(--mono);
+  }
+  #wl-combat-end .wl-note{ margin-top:10px; font-size:12px; color:var(--muted) }
+
+  /* Actions (match .actions/.choice look) */
+  #wl-combat-end .wl-actions{
+    display:flex!important; justify-content:flex-end; gap:10px;
+    padding:16px 22px 22px;
+  }
+  #wl-combat-end .wl-btn{
+    all:unset; cursor:pointer; padding:10px 14px; border-radius:10px;
+    border:1px solid rgba(227,143,43,.35);
+    background:linear-gradient(180deg, rgba(227,143,43,.10), rgba(0,0,0,.25));
+    color:var(--text);
+    font-family:var(--mono);
+  }
+  #wl-combat-end .wl-btn:hover{ border-color:var(--accent) }
+  #wl-combat-end .wl-btn.wl-primary{
+    background:linear-gradient(180deg, rgba(227,143,43,.14), rgba(0,0,0,.28));
+    border-color:rgba(227,143,43,.45);
+  }
+
+  /* Outcome icon tints */
+  #wl-combat-end.wl-win .wl-icon{
+    color:var(--ok);
+    box-shadow: inset 0 0 0 1px rgba(121,179,123,.35);
+  }
+  #wl-combat-end.wl-lose .wl-icon{
+    color:var(--danger);
+    box-shadow: inset 0 0 0 1px rgba(198,69,58,.35);
+  }
+  #wl-combat-end.wl-flee .wl-icon{
+    color:var(--warn);
+    box-shadow: inset 0 0 0 1px rgba(242,193,78,.35);
+  }
+
+  @media(max-width:560px){
+    #wl-combat-end .wl-grid{ grid-template-columns:1fr }
+  }
 </style>
 
 <div id="wl-combat-end" class="wl-overlay" role="dialog" aria-modal="true" aria-labelledby="wl-title" aria-describedby="wl-desc">
@@ -3345,76 +3476,119 @@ window.WL_TextMap={world:WORLD,towns:TOWNS,openWorld,travelTo};
   (function(){ const n=document.getElementById('wl-combat-end'); if(n && n.parentNode!==document.body){ document.body.appendChild(n); }})();
 })();
 
-/*  Wastelife — Living World v0.3 (Interactive NPC Core)
-    Phase 1: NPCs at real locations, click-to-interact, trust meter, travel-to-them button.
-    Paste once. Do not keep older LW code alongside this. */
+/* Wastelife — Living World v0.5 (consolidated, no conflicts)
+   - Social button
+   - NPCs with Chat / Rumors / Trade / Hire / Lore / Request
+   - Travel-to-them if far (uses your Text Map travel)
+*/
+(function(){
+  "use strict";
+  const W = window;
+  const ST = () => (W.state || (W.state = {}));  // TDZ-safe: never touch bare `state`
 
-const LW = (() => {
-  /* ------------ Inputs from host ------------ */
-  const LOCS = (Array.isArray(window.LOCATIONS) && window.LOCATIONS.length)
-    ? window.LOCATIONS
-    : ["Dustown","Copper Flats","Old Boston Ruins"]; // fallback
-  const FACS = (Array.isArray(window.FACTIONS) && window.FACTIONS.length)
-    ? window.FACTIONS
-    : [
-        {id:"none", name:"Unaffiliated"},
-        {id:"settlers",name:"Settlers Union"},
-        {id:"rangers", name:"Desert Rangers"},
-        {id:"scribes", name:"Scribes of the Old World"},
-        {id:"marauders",name:"Dust Marauders"}
-      ];
-
-  /* ------------ State ------------ */
-  const S = {
-    tick: 0,
-    water: 60,
-    faction: Object.fromEntries(FACS.map(f => [f.id, {...f, caps:50, land:0, recruits:8}])),
-    npcs: [
-      {id:"joe",  name:"Trader Joe", role:"Trader", trust:50, node:idxOf("Dustown"), alive:true},
-      {id:"sara", name:"Merc Sara",  role:"Merc",   trust:50, node:idxOf("Copper Flats"), alive:true},
-      {id:"eli",  name:"Scribe Eli", role:"Scribe", trust:50, node:idxOf("Old Boston Ruins"), alive:true},
-    ],
-    news:[]
-  };
-
-  /* ------------ Helpers ------------ */
-  const pick = a => a[Math.floor(Math.random()*a.length)];
-  const here = () => (window.state?.location || LOCS[0]);
-  function idxOf(loc){ const i = LOCS.indexOf(loc); return i >= 0 ? i : 0; }
-  function pushNews(t){ S.news.push(t); if (S.news.length>40) S.news.shift(); }
-  function logSafe(s){ try{ log(s); }catch{ console.log("[WORLD]", s);} }
+  // Modal helper (uses your existing modal markup)
   function showModalSimple(title, html){
     const mb=document.getElementById("modal-backdrop"),
           mt=document.getElementById("modal-title"),
           mc=document.getElementById("modal-content");
-    if(!mb||!mt||!mc) return alert(title+"\n\n"+html.replace(/<[^>]+>/g,""));
+    if(!mb||!mt||!mc) return alert(title+"\n\n"+String(html||"").replace(/<[^>]+>/g,""));
     mt.textContent=title; mc.innerHTML=html; mb.style.display="grid";
   }
+  const logSafe = s => { try{ W.log(s); } catch { console.log("[WORLD]", s); } };
 
-  /* ------------ Movement & Yearly Tick ------------ */
+  // Canonical locations (scoped here only) with aliases to match your WORLD ids
+  const LOC = {
+    CANON: {
+      dustown:    { name:"Dustown",        worldId:"dustford" }, // Dustford↔Dustown
+      ironwood:   { name:"Ironwood",       worldId:"ironwood" },
+      dunes:      { name:"Wasteland Dunes",worldId:"dunes" },
+      ruins_zone: { name:"Cracked Ruins",  worldId:"ruins" },
+      flats_zone: { name:"Salt Flats",     worldId:"flats" },
+      canyon:     { name:"Red Canyons",    worldId:"canyon" },
+      swamp:      { name:"Irrad. Swamp",   worldId:"swamp" },
+    },
+    ALIASES: {
+      "dustown":"dustown", "dustford":"dustown", "ironwood":"ironwood",
+      "wasteland dunes":"dunes", "cracked ruins":"ruins_zone", "salt flats":"flats_zone",
+      "red canyons":"canyon", "irrad. swamp":"swamp", "swamp":"swamp"
+    },
+    slug(s){ return String(s||"").toLowerCase().replace(/[^\w]+/g," ").trim(); },
+    idFromAny(x){ if(!x) return null; if(this.CANON[x]) return x; const id=this.ALIASES[this.slug(x)]; return id||null; },
+    name(id){ return this.CANON[id]?.name || String(id||"Unknown"); },
+    worldId(id){ return this.CANON[id]?.worldId || null; }
+  };
+
+  // Make sure the player has a canonical id alongside the display name
+  (function bootstrapPlayerLoc(){
+    const s = ST();
+    if (!s.locationId){
+      s.locationId = LOC.idFromAny(s.location) || "ironwood";
+      s.location   = LOC.name(s.locationId);
+    }
+  })();
+
+  // Factions (fallbacks)
+  const FACS = (Array.isArray(W.FACTIONS) && W.FACTIONS.length)
+    ? W.FACTIONS
+    : [
+        {id:"none", name:"Unaffiliated"},
+        {id:"settlers", name:"Settlers Union"},
+        {id:"rangers",  name:"Desert Rangers"},
+        {id:"scribes",  name:"Scribes of the Old World"},
+        {id:"dust_marauders", name:"Dust Marauders"}
+      ];
+
+  // LW state
+  const S = {
+    tick: 0,
+    news: [],
+    faction: Object.fromEntries(FACS.map(f => [f.id, { id:f.id, name:f.name, caps:50, land:0, recruits:8 }])),
+    npcs: [
+      { id:"joe",  name:"Trader Joe", role:"Trader", trust:50, locId:"dustown",  alive:true },
+      { id:"sara", name:"Merc Sara",  role:"Merc",   trust:50, locId:"ironwood", alive:true },
+      { id:"eli",  name:"Scribe Eli", role:"Scribe", trust:50, locId:"dunes",    alive:true },
+    ],
+  };
+  function pushNews(t){ S.news.push(String(t)); if (S.news.length>40) S.news.shift(); }
+  const hereId  = () => ST().locationId;
+  const hereStr = () => LOC.name(ST().locationId);
+
+  // NPC wandering (lightweight)
   function moveNPCs(){
+    const ring = Object.keys(LOC.CANON);
     S.npcs.forEach(n=>{
       if(!n.alive) return;
-      if (Math.random()<0.45) {                      // wander occasionally
-        n.node = (n.node + (Math.random()<0.5 ? 1 : -1) + LOCS.length) % LOCS.length;
+      if (Math.random()<0.45){
+        const i = Math.max(0, ring.indexOf(n.locId));
+        n.locId = ring[(i + (Math.random()<0.5?-1:1) + ring.length) % ring.length];
       }
     });
   }
   function tick(){
-    S.tick++;
-    moveNPCs();
-    pushNews(`The year ${2165+S.tick} passes in the wastes...`);
-    ensureSocialButton();
+    S.tick++; moveNPCs();
+    pushNews(`The year ${2165 + S.tick} passes in the wastes.`);
+    ensureSocialBtn();
   }
 
-  /* ------------ Social UI ------------ */
-  function ensureSocialButton(){
-    const group=document.querySelector(".actions .group");
-    if(!group || document.getElementById("btn-social")) return;
-    const b=document.createElement("button");
-    b.id="btn-social"; b.textContent="Social / Map";
-    b.onclick=openSocial;
-    group.appendChild(b);
+  // Travel helper (prefer your Text Map)
+  function travelToId(id){
+    const cid = LOC.idFromAny(id); if (!cid) return;
+    const wid = LOC.worldId(cid);
+    if (typeof W.WL_TextMap?.travelTo === "function"){ W.WL_TextMap.travelTo(wid); return; }
+    // fallback if Text Map is missing
+    const s = ST(); s.locationId = cid; s.location = LOC.name(cid); logSafe(`You travel to ${s.location}.`); W.updateUI?.();
+  }
+
+  // Social button
+  function ensureSocialBtn(){
+    if (document.getElementById("btn-social")) return;
+    const anchor = document.getElementById("btn-inventory")?.closest(".group")
+                || document.querySelector(".actions .group")
+                || document.querySelector(".actions")
+                || document.body;
+    const b = document.createElement("button");
+    b.id = "btn-social"; b.textContent = "Social / NPCs"; b.onclick = openSocial;
+    anchor.appendChild(b);
   }
 
   function openSocial(){
@@ -3423,362 +3597,111 @@ const LW = (() => {
       return `<tr><td>${F.name}</td><td>${F.caps}</td><td>${F.recruits}</td></tr>`;
     }).join("");
 
-    const rowsN = S.npcs.filter(n=>n.alive).map(n=>
-      `<tr>
-         <td><button class="choice" onclick="LW.openNPC('${n.id}')">${n.name}</button></td>
-         <td>${n.role}</td>
-         <td>${LOCS[n.node]}</td>
-       </tr>`
-    ).join("") || `<tr><td colspan="3">No survivors</td></tr>`;
+    const all    = S.npcs.filter(n => n.alive);
+    const nearby = all.filter(n => n.locId === hereId());
+    const other  = all.filter(n => n.locId !== hereId());
+
+    const rows = (list) => list.map(n => `
+      <tr>
+        <td><button class="choice" onclick="LW.openNPC('${n.id}')">${n.name}</button></td>
+        <td>${n.role}</td>
+        <td>${LOC.name(n.locId)}</td>
+      </tr>`).join("") || `<tr><td colspan="3">—</td></tr>`;
 
     const news = S.news.slice(-7).map(s=>`<li>${s}</li>`).join("") || "<li>(quiet)</li>";
 
     showModalSimple("Social — NPCs", `
       <div class="title">Factions</div>
       <table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
-        <tr><th align="left">Name</th><th>Caps</th><th>Recruits</th></tr>
-        ${rowsF}
+        <tr><th align="left">Name</th><th>Caps</th><th>Recruits</th></tr>${rowsF}
       </table>
-      <div class="title" style="margin-top:8px">NPCs</div>
+      <div class="title" style="margin-top:8px">Here in ${hereStr()}</div>
       <table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
-        <tr><th align="left">Name</th><th>Role</th><th align="left">Location</th></tr>
-        ${rowsN}
+        <tr><th align="left">Name</th><th>Role</th><th align="left">Location</th></tr>${rows(nearby)}
       </table>
+      <div class="hr"></div>
+      <details><summary class="linklike">Show NPCs elsewhere</summary>
+        <table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
+          <tr><th align="left">Name</th><th>Role</th><th align="left">Location</th></tr>${rows(other)}
+        </table>
+      </details>
       <div class="title" style="margin-top:8px">Recent News</div>
       <ul style="margin:6px 0 0 18px">${news}</ul>
     `);
   }
 
-  /* ------------ Interactions ------------ */
-  function openNPC(n) {
-    // accept id or object
-    const npc = (typeof n === "string") ? S.npcs.find(x=>x.id===n && x.alive) : n;
-    if(!npc){ showModalSimple("NPC not found",""); return; }
+  function openNPC(idOrObj){
+    const npc = (typeof idOrObj === "string") ? S.npcs.find(x=>x.id===idOrObj && x.alive) : idOrObj;
+    if (!npc) return showModalSimple("NPC not found","");
 
-    const npcLoc = LOCS[npc.node] || "Unknown";
-    const playerLoc = here();
-    const nearby = (npcLoc === playerLoc);
-
+    const near = (npc.locId === hereId());
     let html = `
       <p><b>${npc.name}</b> (${npc.role})<br>
-      Location: ${npcLoc}${nearby ? " (nearby)" : ""}<br>
-      Trust: ${npc.trust ?? 0}</p>
-    `;
+      Location: ${LOC.name(npc.locId)}${near ? " (nearby)" : ""}<br>
+      Trust: ${npc.trust ?? 0}</p>`;
 
-    if (!nearby) {
-      html += `
-        <button class="choice" onclick="LW._travelTo('${npcLoc}')">Travel to ${npcLoc}</button>
-      `;
+    if (!near){
+      html += `<button class="choice" onclick="(function(){ LW.travelToId('${npc.locId}'); LW.openNPC('${npc.id}'); })()">Travel to ${LOC.name(npc.locId)}</button>`;
     } else {
-      // role-specific actions when nearby
-      if (npc.role === "Trader") {
-        html += `
-          <button class="choice" onclick="LW.talk('${npc.id}','trade')">Trade</button>
-          <button class="choice" onclick="LW.talk('${npc.id}','rumor')">Ask for Rumors</button>
-        `;
-      } else if (npc.role === "Merc") {
-        html += `
-          <button class="choice" onclick="LW.talk('${npc.id}','hire')">Hire as Guard</button>
-          <button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>
-        `;
-      } else if (npc.role === "Scribe") {
-        html += `
-          <button class="choice" onclick="LW.talk('${npc.id}','lore')">Share Knowledge</button>
-          <button class="choice" onclick="LW.talk('${npc.id}','request')">Request Research</button>
-        `;
-      } else {
-        html += `<button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>`;
-      }
+      html += `
+        <button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>
+        <button class="choice" onclick="LW.talk('${npc.id}','rumor')">Ask for Rumors</button>`;
+      if (npc.role === "Trader") html += `<button class="choice" onclick="LW.talk('${npc.id}','trade')">Trade</button>`;
+      if (npc.role === "Merc")   html += `<button class="choice" onclick="LW.talk('${npc.id}','hire')">Hire as Guard</button>`;
+      if (npc.role === "Scribe") html += `
+        <button class="choice" onclick="LW.talk('${npc.id}','lore')">Share Knowledge</button>
+        <button class="choice" onclick="LW.talk('${npc.id}','request')">Request Research</button>`;
     }
-
     showModalSimple(npc.name, html);
   }
 
   function talk(id, action){
-    const npc = S.npcs.find(n=>n.id===id && n.alive);
-    if(!npc) return;
-    const npcLoc = LOCS[npc.node] || "Unknown";
-    const playerLoc = here();
-    const nearby = (npcLoc === playerLoc);
+    const npc = S.npcs.find(n=>n.id===id && n.alive); if(!npc) return;
+    const near = (npc.locId === hereId());
+    const s = ST();
+    let out="", trust=0;
 
-    let out = "";
-    let trustDelta = 0;
+    if (!near && action!=="rumor"){ showModalSimple(npc.name, `<p>${npc.name} is at ${LOC.name(npc.locId)}. Travel there first.</p>`); return; }
 
-    if (!nearby && action!=="rumor") {
-      showModalSimple(npc.name, `<p>${npc.name} is at ${npcLoc}. Travel there first.</p>`);
-      return;
-    }
-
-    switch (action) {
+    switch(action){
       case "trade":
-        out = `${npc.name} lays out wares. (Hook your trade UI here; apply price mods if needed.)`;
-        trustDelta = 1;
-        break;
+        out = `${npc.name} lays out wares. (Hook: open trader UI)`;
+        try{ W.openTrade?.("Trader"); }catch{}
+        trust = 1; break;
       case "rumor":
-        out = `${npc.name} shares rumors about faction movements.`;
-        trustDelta = 2;
-        break;
+        out = `${npc.name} shares rumors about faction movements.`; trust = 2; break;
       case "hire": {
         const cost = 15;
-        if ((window.state?.caps || 0) >= cost) {
-          window.state.caps -= cost;
-          out = `${npc.name} agrees to guard you for a while. (Stub: push to companions.)`;
-          trustDelta = 3;
-          window.updateUI?.();
-        } else {
-          out = `${npc.name}: "Come back with ${cost} caps."`;
-        }
+        if ((s.caps||0) >= cost){ s.caps -= cost; out = `${npc.name} agrees to guard you for a while. (Companion stub)`; trust = 3; W.updateUI?.(); }
+        else out = `${npc.name}: "Come back with ${cost} caps."`;
         break;
       }
       case "lore":
-        out = `${npc.name} teaches you pre-war tech insights. (+10 XP stub)`;
-        window.gainXP?.(10);
-        trustDelta = 2;
-        break;
+        out = `${npc.name} teaches you pre-war tech insights. (+10 XP)`; W.gainXP?.(10); trust = 2; break;
       case "request":
-        out = `${npc.name}: "Bring me a Holotape and I'll share a schematic."`;
-        trustDelta = 1;
-        break;
-      case "chat":
+        out = `${npc.name}: "Bring me a Holotape and I'll share a schematic."`; trust = 1; break;
       default:
-        out = `${npc.name} chats about the road.`;
-        trustDelta = 1;
-        break;
+        out = `${npc.name} chats about the road.`; trust = 1;
     }
 
-    npc.trust = Math.min(100, (npc.trust || 0) + trustDelta);
-    pushNews(out);
-    logSafe(out);
+    npc.trust = Math.min(100, (npc.trust||0) + trust);
+    pushNews(out); logSafe(out);
     showModalSimple(npc.name, `<p>${out}</p><p>Trust now: ${npc.trust}</p>`);
   }
 
-  /* ------------ Travel helper (optional) ------------ */
-  function travelTo(target){
-    if (!target) return;
-    const hereBefore = here();
-    if (hereBefore === target) { logSafe(`Already at ${target}.`); return; }
-
-    // If you have your own Travel modal/system, call it here instead:
-    window.state && (window.state.location = target);
-    logSafe(`You travel from ${hereBefore} to ${target}.`);
-    window.updateUI?.();
-
-    // Advance world time if you use action-based ticking
-    try { WorldSim?.advanceTime?.("travel"); } catch {}
-    try { closeModal?.(); } catch {}
-  }
-
-  /* ------------ Patching & boot ------------ */
+  // Wire up
   function patch(){
-    // Age Up drives yearly tick
-    const age=document.getElementById("btn-age");
-    if(age && !age.dataset._lw){ age.dataset._lw=1; age.addEventListener("click", ()=>setTimeout(tick,0)); }
-    // Close modal safety
-    const c=document.getElementById("modal-close");
-    if(c && !c.dataset._lw){ c.dataset._lw=1; c.addEventListener("click",()=>{document.getElementById("modal-backdrop").style.display="none";}); }
+    ensureSocialBtn();
+    const age = document.getElementById("btn-age");
+    if (age && !age.dataset._lw){ age.dataset._lw="1"; age.addEventListener("click", ()=> setTimeout(tick,0)); }
+    const c = document.getElementById("modal-close");
+    if (c && !c.dataset._lw){ c.dataset._lw="1"; c.addEventListener("click", ()=>{ const mb=document.getElementById("modal-backdrop"); if(mb) mb.style.display="none"; }); }
   }
-  function init(){ patch(); ensureSocialButton(); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", patch);
+  else patch();
 
-  if (document.readyState==="loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
-
-  /* public API */
-  return {
-    state: S,
-    openSocial,
-    openNPC,
-    talk,
-    _travelTo: travelTo,   // used by the “Travel to” button in NPC modal
-  };
-})();
-// ==== Unify Locations v1 (shim) ====
-// Goal: make player/NPC/Map share the same place identity with minimal changes.
-
-// 1) Canonical registry + aliases (adjust as your world grows)
-const LOC_CANON = {
-  dustown:       { name: "Dustown",        type: "town" },
-  ironwood:      { name: "Ironwood",       type: "town" },
-  // wilderness from Text Map
-  dunes:         { name: "Wasteland Dunes", type: "wild" },
-  ruins_zone:    { name: "Cracked Ruins",   type: "wild" },
-  flats_zone:    { name: "Salt Flats",      type: "wild" },
-  canyon:        { name: "Red Canyons",     type: "wild" },
-  swamp:         { name: "Irrad. Swamp",    type: "wild" },
-};
-
-// If two systems use slightly different names, map them here → canonical id.
-const LOC_ALIASES = {
-  // towns
-  "dustown": "dustown",
-  "dustford": "dustown",       // unify Dustford→Dustown (rename later if you like)
-  "ironwood": "ironwood",
-};
-
-  // wild
-  "wasteland dunes": "dunes",
-  "cracked ruins": "ruins_zone",
-  "salt flats": "flats_zone",
-  "red canyons": "canyon",
-  "irrad. swamp": "swamp",
-};
-
-// Helpers
-function _slugName(s){ return String(s||"").toLowerCase().replace(/[^\w]+/g," ").trim(); }
-function locIdFromAny(x){
-  if (!x) return null;
-  // If it's already a known id
-  if (LOC_CANON[x]) return x;
-  // If it's a display name or foreign id/name, try aliasing
-  const key = _slugName(x);
-  const id  = LOC_ALIASES[key] || null;
-  return id && LOC_CANON[id] ? id : null;
-}
-function locName(id){ return LOC_CANON[id]?.name || String(id||"Unknown"); }
-
-// 2) Player location: keep both name (legacy) and canonical id
-if (!state.locationId) {
-  // try to migrate existing state.location
-  state.locationId = locIdFromAny(state.location) || "dustown";
-  state.location = locName(state.locationId);
-}
-
-// Wrap a single travel function used by *everything*
-function travelToId(id){
-  const cid = locIdFromAny(id);
-  if (!cid) { console.warn("[LOC] Unknown destination:", id); return; }
-  if (state.locationId === cid) { log(`Already at ${locName(cid)}.`); return; }
-  const from = locName(state.locationId);
-  state.locationId = cid;
-  state.location   = locName(cid); // keep UI in sync
-  log(`You travel from ${from} to ${state.location}.`);
-  updateUI?.();
-  try { closeModal?.(); } catch {}
-}
-
-// 3) Patch Text Map travel to use our canonical helper
-(function(){
-  const _travel = window.travelTo;
-  if (typeof _travel === "function"){
-    window.travelTo = function(id){
-      // id is like "dunes", "ruins", "dustford" etc.
-      travelToId(id);
-    };
-  }
-})();
-
-// 4) Patch LW helpers to use canonical location ids for both player and NPCs
-(function(){
-  if (!window.LW) return;
-  const L = window.LW;
-
-  // Where am I?
-  const _here = L.here || (() => state.location);
-  L.here = function(){
-    // Return *name* for legacy callers, but ensure it comes from canonical id
-    return locName(state.locationId);
-  };
-
-  // NPC storage: convert any numeric node index → canonical id once at boot
-  const S = L.state;
-  if (S && Array.isArray(S.npcs)){
-    const locsArray = Array.isArray(window.LOCATIONS) ? window.LOCATIONS : [];
-    S.npcs.forEach(n => {
-      // If node is a number (index into LOCATIONS), resolve name then id
-      if (typeof n.node === "number" && locsArray[n.node]){
-        const id = locIdFromAny(locsArray[n.node]);
-        n.locId = id || state.locationId;
-      } else if (typeof n.node === "string"){
-        // It might already be a name
-        n.locId = locIdFromAny(n.node) || state.locationId;
-      } else if (!n.locId){
-        n.locId = state.locationId; // fallback
-      }
-      delete n.node; // retire the old field
-    });
-  }
-
-  // When LW moves NPCs, keep using canonical ids (simple wander demo)
-  L.moveNPCs = function(){
-    const order = Object.keys(LOC_CANON); // simple ring; customize per-graph later
-    S.npcs.forEach(n => {
-      if (!n.alive) return;
-      if (Math.random() < 0.45){
-        const i = Math.max(0, order.indexOf(n.locId));
-        const j = (i + (Math.random()<0.5?-1:1) + order.length) % order.length;
-        n.locId = order[j];
-      }
-    });
-  };
-
-  // Upgrade the Social modal: show only nearby by default, with a toggle
-  const _openSocial = L.openSocial;
-  L.openSocial = function(){
-    const hereId = state.locationId;
-    const all = S.npcs.filter(n => n.alive);
-    const nearby = all.filter(n => n.locId === hereId);
-    const other  = all.filter(n => n.locId !== hereId);
-
-    const rows = (list) => list.map(n =>
-      `<tr>
-        <td><button class="choice" onclick="LW.openNPC('${n.id}')">${n.name}</button></td>
-        <td>${n.role}</td>
-        <td>${locName(n.locId)}</td>
-      </tr>`).join("") || `<tr><td colspan="3">—</td></tr>`;
-
-    showModalSimple("Social — NPCs", `
-      <div class="title">Here in ${locName(hereId)}</div>
-      <table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
-        <tr><th align="left">Name</th><th>Role</th><th align="left">Location</th></tr>
-        ${rows(nearby)}
-      </table>
-      <div class="hr"></div>
-      <details>
-        <summary class="linklike">Show NPCs in other locations</summary>
-        <table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
-          <tr><th align="left">Name</th><th>Role</th><th align="left">Location</th></tr>
-          ${rows(other)}
-        </table>
-      </details>
-    `);
-  };
-
-  // Enforce “must be here to interact” and offer travel
-  const _openNPC = L.openNPC;
-  L.openNPC = function(idOrObj){
-    const npc = (typeof idOrObj === "string")
-      ? S.npcs.find(x => x.id === idOrObj && x.alive)
-      : idOrObj;
-    if (!npc){ showModalSimple("NPC not found",""); return; }
-
-    const hereId = state.locationId;
-    const near   = (npc.locId === hereId);
-    let html = `
-      <p><b>${npc.name}</b> (${npc.role})<br>
-      Location: ${locName(npc.locId)}${near ? " (nearby)" : ""}<br>
-      Trust: ${npc.trust ?? 0}</p>
-    `;
-
-    if (!near){
-      html += `<button class="choice" onclick="(function(){ travelToId('${npc.locId}'); LW.openNPC('${npc.id}'); })()">Travel to ${locName(npc.locId)}</button>`;
-    } else {
-      // same actions you had before, unchanged
-      html += `
-        <button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>
-        <button class="choice" onclick="LW.talk('${npc.id}','rumor')">Ask for Rumors</button>
-      `;
-      if (npc.role === "Trader"){
-        html += `<button class="choice" onclick="LW.talk('${npc.id}','trade')">Trade</button>`;
-      }
-      if (npc.role === "Merc"){
-        html += `<button class="choice" onclick="LW.talk('${npc.id}','hire')">Hire as Guard</button>`;
-      }
-      if (npc.role === "Scribe"){
-        html += `<button class="choice" onclick="LW.talk('${npc.id}','lore')">Share Knowledge</button>`;
-      }
-    }
-
-    showModalSimple(npc.name, html);
-  };
+  // Expose for onclicks
+  W.LW = { state:S, openSocial, openNPC, talk, travelToId };
 })();
 </script>
 </body>
