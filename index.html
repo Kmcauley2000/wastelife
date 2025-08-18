@@ -2728,259 +2728,8 @@ function playerBattleStats(){
   return { atk, def, spd, crit };
 }
 
-/* ========= Turn-Based Combat ========= */
-// openCombat(enemy, { source })
-function openCombat(enemy, ctx = {}) {
-  const m = openModal("Encounter");
-  let turn = 1;
-  let logBox, enemyHPFill, playerHPFill;
 
-  // Snapshot player battle stats each round
-  const pstats = () => playerBattleStats();
-  const enemyStats = { atk: enemy.atk, def: enemy.def, spd: enemy.spd };
 
-  // Build UI
-  const hud = el("div", "kv");
-  hud.append(el("div", null, "Enemy"));
-  hud.append(el("div", "small", `${enemy.name} (Lv ?)`));
-  m.content.append(hud);
-
-  // Enemy bar
-  const eRow = el("div", "kv");
-  eRow.append(el("div", null, enemy.name));
-  const eBar = el("div", "bar");
-  enemyHPFill = el("i");
-  eBar.append(enemyHPFill);
-  eRow.append(eBar);
-  m.content.append(eRow);
-
-  // Player bar
-  const pRow = el("div", "kv");
-  pRow.append(el("div", null, state.name));
-  const pBar = el("div", "bar");
-  playerHPFill = el("i");
-  pBar.append(playerHPFill);
-  pRow.append(pBar);
-  m.content.append(pRow, el("div", "hr"));
-
-  // Log
-  logBox = el("div");
-  m.content.append(logBox);
-
-  // Actions
-  const actionRow = el("div", "kv");
-  actionRow.append(el("div", null, "Actions"));
-  const buttonsBox = el("div");
-  const btnAttack = el("button", "choice", "Attack");
-  const btnItem   = el("button", "choice", "Item");
-  const btnFlee   = el("button", "choice", "Flee");
-  buttonsBox.append(btnAttack, btnItem, btnFlee);
-  actionRow.append(buttonsBox);
-  m.content.append(actionRow);
-
-  // Item submenu (inline)
-  const itemBox = el("div");
-  m.content.append(itemBox);
-
-  function uiLog(t) {
-    const p = el("p", null, t);
-    logBox.append(p);
-    logBox.scrollTop = logBox.scrollHeight;
-  }
-
-  function refreshBars() {
-    const ePct = Math.max(0, Math.round((enemy.curHP / enemy.hp) * 100));
-    enemyHPFill.style.width = ePct + "%";
-    const pPct = Math.max(0, Math.round((state.hp / state.hpMax) * 100));
-    playerHPFill.style.width = pPct + "%";
-  }
-
-  function dmgCalc(attackerAtk, defenderDef, critChance = 0.05) {
-    let raw = attackerAtk + rnd(1, 6) - 3;
-    const K = 25; // bigger K = weaker armor
-    const mult = 1 - (defenderDef / (defenderDef + K));
-    let amount = Math.max(1, Math.round(raw * mult));
-    let crit = false;
-    if (Math.random() < critChance) {
-      amount = Math.round(amount * 1.5);
-      crit = true;
-    }
-    return { amount, crit };
-  }
-
-  function endCombat(victory) {
-    [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = true);
-
-    if (victory) {
-      state.battlesWon++;
-      const reward = { ...enemy.reward };
-      if (chance(0.10)) reward.items = { ...(reward.items || {}), food: 1 };
-      if (chance(0.08)) reward.items = { ...(reward.items || {}), duct_tape: (reward.items?.duct_tape || 0) + 1 };
-      grantBattleRewards(reward);
-
-      uiLog(`Victory! +${reward.xp || 0} XP, +${reward.caps || 0} caps${reward.items ? " (loot gained)" : ""}.`);
-      log(`Defeated ${enemy.name}.`);
-      updateUI();
-    } else {
-      state.battlesLost++;
-      log(`You were overwhelmed by ${enemy.name}.`);
-      updateUI();
-      if (state.hp <= 0) die();
-    }
-    tickBuffs("combat");
-  }
-
-  function enemyTurn() {
-    if (enemy.curHP <= 0) return;
-    const { def } = pstats();
-    const result = dmgCalc(enemyStats.atk, def, 0.05);
-    damage(result.amount);
-    uiLog(`${enemy.name} hits you for ${result.amount}${result.crit ? " (CRIT!)" : ""}.`);
-    refreshBars();
-    if (state.hp <= 0) {
-      uiLog("You collapse!");
-      endCombat(false);
-      return true;
-    }
-    return false;
-  }
-
-  function playerTurn() {
-    [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = false);
-  }
-
-  // ---- Attack (ammo-aware) ----
-  btnAttack.onclick = () => {
-    [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = true);
-
-    const gate = currentAttackAndCritWithAmmoGate();
-
-    // Consume ammo when applicable
-    if (gate.usedAmmo && gate.perShot > 0 && gate.ammoId) {
-      const ok = consumeAmmo(gate.ammoId, gate.perShot);
-      if (!ok) {
-        uiLog(`*Click.* Out of ammo (${gate.ammoName}). You swing your weapon!`);
-      } else {
-        uiLog(`[${gate.ammoName} -${gate.perShot}]`);
-      }
-    }
-
-    if (gate.out) {
-      uiLog(`*Click.* Out of ammo (${gate.ammoName}). You strike with a melee bash!`);
-    }
-
-    // Use gated values to avoid double-counting gear/weapon
-    const ps = playerBattleStats();
-    const atkBoostActive = (state.buffs?.atkBoost && (state.buffs.atkBoost.turns || state.buffs.atkBoost) > 0);
-
-    const baseAtk  = (gate.atk  != null ? gate.atk  : ps.atk);
-    const baseCrit = (gate.crit != null ? gate.crit : ps.crit);
-
-    const totalAtk  = Math.max(1, baseAtk + (atkBoostActive ? 4 : 0));
-    const totalCrit = clamp(baseCrit, 0, 0.5);
-
-    const result = dmgCalc(totalAtk, enemyStats.def, totalCrit);
-
-    // Apply damage to enemy
-    enemy.curHP = Math.max(0, enemy.curHP - result.amount);
-    uiLog(`You hit ${enemy.name} for ${result.amount}${result.crit ? " (CRIT!)" : ""}.`);
-    refreshBars();
-
-    if (enemy.curHP <= 0) {
-      uiLog(`${enemy.name} collapses!`);
-      endCombat(true);
-      return;
-    }
-
-    // enemy retaliates
-    setTimeout(() => {
-      const ended = enemyTurn();
-      if (!ended) playerTurn();
-    }, 150);
-  };
-
-  // ---- Item (usable combat items from inventory) ----
-  btnItem.onclick = () => {
-    itemBox.innerHTML = "";
-    migrateInventoryShape();
-    const usable = inv().filter(s => ITEMS[s.id]?.use);
-    if (!usable.length) {
-      itemBox.append(el("p", "small muted", "(No usable items)"));
-      return;
-    }
-    usable.forEach(s => {
-      const meta = ITEMS[s.id];
-      const b = el("button", "choice", `${meta.name} ×${s.qty}`);
-      b.onclick = () => {
-        const consumed = useItem(s.id);
-        uiLog(`You use ${meta.name}.`);
-        refreshBars();
-        itemBox.innerHTML = "";
-
-        setTimeout(() => {
-          const ended = enemyTurn();
-          if (!ended) playerTurn();
-        }, 150);
-      };
-      itemBox.append(b, el("span", "small muted", " "));
-    });
-  };
-
-// ---- Flee (close encounter, show simple "Escaped" popup) ----
-btnFlee.onclick = () => {
-  [btnAttack, btnItem, btnFlee].forEach(b => b.disabled = true);
-
-  const ps = pstats();
-  const pSpd = Number(ps?.spd ?? 0);
-  const eSpd = Number(enemyStats?.spd ?? 0);
-
-  // Base flee chance: 35% + 3% per point of speed advantage
-  let base = 0.35 + ((pSpd - eSpd) * 0.03);
-
-  // Perk/buff checks guarded so they don't throw
-  if (Array.isArray(state?.perks) && state.perks.includes("swift")) base += 0.10; // +10% Swift
-  if ((state?.buffs?.fleeBoost ?? 0) > 0)                          base += 0.15; // +15% Stealth Field, etc.
-
-  // Clamp and sanitize
-  const fleeChance = clamp(isFinite(base) ? base : 0.35, 0.10, 0.90); // never 0% / 100%
-
-  if (Math.random() < fleeChance) {
-    // Game state + log
-    uiLog("You slip away!");
-    log(`You fled from ${enemy.name}.`);
-    updateUI();
-    tickBuffs("combat");
-
-    // Close the encounter, then show a minimal confirmation modal
-    closeModal();
-    setTimeout(() => {
-      const mm = openModal("Escaped");
-      const msg = el("p", null, "You slip away.");
-      msg.style.textAlign = "center";
-      msg.style.fontSize = "1.15rem";
-      msg.style.margin = "18px 0 12px";
-
-      const ok = el("button", "choice", "Close");
-      ok.style.display = "block";
-      ok.style.margin = "0 auto";
-      ok.onclick = closeModal;
-
-      mm.content.append(msg, ok);
-    }, 0);
-    return;
-  }
-
-  // Fail to flee → enemy acts, then your turn resumes
-  uiLog("You fail to escape!");
-  setTimeout(() => {
-    const ended = enemyTurn();
-    if (!ended) playerTurn();
-    tickBuffs("combat"); // tick after enemy’s turn on failure
-  }, 150);
-};
-
-// ✅ Make sure this brace exists to close openCombat(...)
-}
 
 
 
@@ -3937,6 +3686,273 @@ window.addEventListener("town:enterBuilding", (e) => {
   // Fallback
   log(`${building.name} is not wired yet. (Stub)`);
 });
+</script>
+<!-- ==== WL Combat End Screen + openCombat override (FINAL, larger box, green skin) ==== -->
+<style>
+  :root{--wl-bg:rgba(0,0,0,.65);--wl-b:rgba(120,255,120,.18);--wl-b2:rgba(120,255,120,.12);--wl-t:#c6ffd0;--wl-m:#8fb090}
+  /* Overlay + centering (hardened) */
+  #wl-combat-end{position:fixed!important;inset:0!important;display:none;align-items:center;justify-content:center;z-index:2147483647!important;background:var(--wl-bg)}
+  #wl-combat-end.wl-show{display:flex!important}
+  #wl-combat-end *{box-sizing:border-box}
+
+  /* Modal — larger */
+  #wl-combat-end .wl-modal{
+    display:block!important;width:min(900px,98vw)!important;max-width:98vw;min-height:420px!important;
+    background:linear-gradient(180deg,#0c120c,#0a0f0a)!important;border:1px solid var(--wl-b)!important;
+    border-radius:18px!important;box-shadow:0 18px 40px rgba(0,0,0,.6)!important;color:var(--wl-t)
+  }
+  #wl-combat-end .wl-hdr{padding:28px!important;border-bottom:1px solid var(--wl-b2)!important;background:linear-gradient(180deg,#0e1510,#0b120c)!important;display:flex!important;gap:12px;align-items:center}
+  #wl-combat-end .wl-icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:800;background:#0d170e;border:1px solid var(--wl-b2);color:#8dff92}
+  #wl-combat-end .wl-ttl{margin:0;font-size:24px;color:var(--wl-t)}
+  #wl-combat-end .wl-sub{margin:4px 0 0;color:var(--wl-m);font-size:13px}
+
+  #wl-combat-end .wl-body{padding:32px!important}
+  #wl-combat-end .wl-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  #wl-combat-end .wl-card{background:#0a120a;border:1px solid var(--wl-b2);border-radius:14px;padding:20px}
+  #wl-combat-end .wl-card h4{margin:0 0 6px;font-size:13px;color:var(--wl-m)}
+  #wl-combat-end .wl-big{font-size:40px;font-weight:900;color:var(--wl-t)}
+  #wl-combat-end .wl-badge{padding:3px 8px;font-size:11px;border-radius:999px;background:#091108;border:1px solid var(--wl-b2);color:var(--wl-m)}
+  #wl-combat-end .wl-loot{display:flex;gap:8px;flex-wrap:wrap}
+  #wl-combat-end .wl-loot .wl-chip{font-size:12px;padding:6px 10px;background:#0a120a;border:1px solid var(--wl-b);border-radius:999px;color:var(--wl-t)}
+  #wl-combat-end .wl-note{margin-top:10px;font-size:12px;color:var(--wl-m)}
+
+  #wl-combat-end .wl-actions{display:flex!important;justify-content:flex-end;gap:10px;padding:24px 32px 32px}
+  #wl-combat-end .wl-btn{all:unset;cursor:pointer;padding:16px 24px;border-radius:12px;border:1px solid rgba(120,255,120,.25);background:#0b120b;color:var(--wl-t);font-weight:800}
+  #wl-combat-end .wl-btn:hover{background:#0e170e}
+  #wl-combat-end .wl-btn.wl-primary{background:#0f1b10;border-color:rgba(120,255,120,.45)}
+
+  /* Outcome icons */
+  #wl-combat-end.wl-win .wl-icon{background:linear-gradient(180deg,#102713,#0b1a0f);color:#8dff92}
+  #wl-combat-end.wl-lose .wl-icon{background:linear-gradient(180deg,#281217,#1a0b0f);color:#ff8aa1}
+  #wl-combat-end.wl-flee .wl-icon{background:linear-gradient(180deg,#1a2a0f,#0f1b14);color:#d7ff9a}
+
+  @media(max-width:560px){#wl-combat-end .wl-grid{grid-template-columns:1fr}}
+</style>
+
+<div id="wl-combat-end" class="wl-overlay" role="dialog" aria-modal="true" aria-labelledby="wl-title" aria-describedby="wl-desc">
+  <div class="wl-modal" role="document">
+    <div class="wl-hdr">
+      <div class="wl-icon" id="wl-icon">★</div>
+      <div>
+        <h2 id="wl-title" class="wl-ttl">Battle Result</h2>
+        <div id="wl-desc" class="wl-sub">You win!</div>
+      </div>
+    </div>
+    <div class="wl-body">
+      <div class="wl-grid">
+        <div class="wl-card">
+          <h4>Rewards</h4>
+          <div class="wl-big"><span id="wl-xp">+0</span> <span class="wl-badge">XP</span></div>
+          <div class="wl-sub">Caps: <b id="wl-caps">0</b></div>
+        </div>
+        <div class="wl-card">
+          <h4>Loot</h4>
+          <div id="wl-loot" class="wl-loot"><span class="wl-sub">None</span></div>
+        </div>
+      </div>
+      <div id="wl-note" class="wl-note"></div>
+    </div>
+    <div class="wl-actions">
+      <button id="wl-close" class="wl-btn">Close</button>
+      <button id="wl-again" class="wl-btn wl-primary">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---- end-screen helper ---- */
+(function(){
+  const $=id=>document.getElementById(id);
+  const overlay=$("wl-combat-end"), ttl=$("wl-title"), desc=$("wl-desc"), icon=$("wl-icon");
+  const xp=$("wl-xp"), caps=$("wl-caps"), loot=$("wl-loot"), note=$("wl-note");
+  const btnClose=$("wl-close"), btnAgain=$("wl-again");
+  const defaults={win:{t:"Victory!",d:"You overcame the threat.",i:"🏆"},
+                  lose:{t:"Defeat",d:"You were overwhelmed...",i:"💀"},
+                  flee:{t:"Retreat",d:"You escaped safely.",i:"🏃"}};
+  function setLoot(items){
+    loot.innerHTML=""; if(!items||!items.length){const s=document.createElement("span");s.className="wl-sub";s.textContent="None";loot.appendChild(s);return;}
+    items.forEach(n=>{const c=document.createElement("span");c.className="wl-chip";c.textContent=n;loot.appendChild(c);});
+  }
+  function open(opts={}){
+    const mode=(opts.outcome||"win").toLowerCase();
+    overlay.classList.remove("wl-win","wl-lose","wl-flee"); overlay.classList.add("wl-"+mode);
+    const d=defaults[mode]||defaults.win;
+    ttl.textContent=opts.title||d.t; desc.textContent=opts.message||d.d; icon.textContent=opts.icon||d.i;
+    xp.textContent="+"+(opts.xp??0); caps.textContent=(opts.caps??0); setLoot(opts.items||[]); note.textContent=opts.note||"";
+    overlay.classList.add("wl-show"); setTimeout(()=>btnAgain.focus(),0);
+    const onEsc=e=>{if(e.key==="Escape") close("close");}; document.addEventListener("keydown",onEsc);
+    function close(result){ overlay.classList.remove("wl-show"); document.removeEventListener("keydown",onEsc);
+      if(typeof opts.onClose==="function") opts.onClose(result);
+      if(result==="again" && typeof opts.onAgain==="function") opts.onAgain(); }
+    btnClose.onclick=()=>close("close"); btnAgain.onclick=()=>close("again");
+    overlay.onclick=e=>{ if(e.target===overlay) close("close"); };
+  }
+  window.WLCombatEnd={open};
+})();
+
+/* ---- openCombat HARD OVERRIDE (with safe shims) ---- */
+(function(){
+  const safe = (name, ...args) => { try { const fn = window[name]; if (typeof fn === "function") return fn(...args); } catch(_){} };
+  const has   = name => typeof window[name] === "function";
+
+  window.openCombat = function(enemy, ctx = {}) {
+    const m = openModal("Encounter");
+    let logBox, enemyHPFill, playerHPFill;
+
+    const pstats = () => playerBattleStats();
+    const enemyStats = { atk: enemy.atk, def: enemy.def, spd: enemy.spd };
+
+    const hud = el("div","kv");
+    hud.append(el("div",null,"Enemy"));
+    hud.append(el("div","small",`${enemy.name} (Lv ?)`));
+    m.content.append(hud);
+
+    const eRow = el("div","kv");
+    eRow.append(el("div",null,enemy.name));
+    const eBar = el("div","bar"); enemyHPFill = el("i"); eBar.append(enemyHPFill); eRow.append(eBar); m.content.append(eRow);
+
+    const pRow = el("div","kv");
+    pRow.append(el("div",null,state.name));
+    const pBar = el("div","bar"); playerHPFill = el("i"); pBar.append(playerHPFill); pRow.append(pBar);
+    m.content.append(pRow, el("div","hr"));
+
+    logBox = el("div"); m.content.append(logBox);
+
+    const actionRow = el("div","kv"); actionRow.append(el("div",null,"Actions"));
+    const buttonsBox = el("div");
+    const btnAttack = el("button","choice","Attack");
+    const btnItem   = el("button","choice","Item");
+    const btnFlee   = el("button","choice","Flee");
+    buttonsBox.append(btnAttack, btnItem, btnFlee); actionRow.append(buttonsBox); m.content.append(actionRow);
+    const itemBox = el("div"); m.content.append(itemBox);
+
+    function uiLog(t){ const p = el("p",null,t); logBox.append(p); logBox.scrollTop = logBox.scrollHeight; }
+    function refreshBars(){
+      const ePct = Math.max(0, Math.round((enemy.curHP / enemy.hp) * 100)); enemyHPFill.style.width = ePct + "%";
+      const pPct = Math.max(0, Math.round((state.hp / state.hpMax) * 100));  playerHPFill.style.width = pPct + "%";
+    }
+    function dmgCalc(attackerAtk, defenderDef, critChance = 0.05){
+      let raw = attackerAtk + rnd(1,6) - 3;
+      const K = 25, mult = 1 - (defenderDef / (defenderDef + K));
+      let amount = Math.max(1, Math.round(raw * mult)); let crit=false;
+      if (Math.random() < critChance){ amount = Math.round(amount * 1.5); crit = true; }
+      return { amount, crit };
+    }
+
+    function endCombat(victory){
+      [btnAttack, btnItem, btnFlee].forEach(b=>b.disabled=true);
+
+      if (victory){
+        state.battlesWon++;
+        const reward = { ...enemy.reward };
+        if (has("chance") ? chance(0.10) : Math.random() < 0.10) reward.items = { ...(reward.items||{}), food: 1 };
+        if (has("chance") ? chance(0.08)  : Math.random() < 0.08) reward.items = { ...(reward.items||{}), duct_tape: (reward.items?.duct_tape||0) + 1 };
+        safe("grantBattleRewards", reward);
+
+        uiLog(`Victory! +${reward.xp||0} XP, +${reward.caps||0} caps${reward.items ? " (loot gained)" : ""}.`);
+        safe("log", `Defeated ${enemy.name}.`); safe("updateUI"); safe("tickBuffs","combat");
+
+        closeModal();
+        WLCombatEnd.open({
+          outcome:"win",
+          xp: reward.xp||0,
+          caps: reward.caps||0,
+          items: reward.items ? Object.keys(reward.items) : [],
+          note:`You defeated ${enemy.name}.`
+        });
+      } else {
+        state.battlesLost++; safe("log",`You were overwhelmed by ${enemy.name}.`); safe("updateUI");
+        if (state.hp <= 0) safe("die"); safe("tickBuffs","combat");
+        closeModal();
+        WLCombatEnd.open({ outcome:"lose", xp:0, caps:0, items:[], note:`You were defeated by ${enemy.name}.` });
+      }
+    }
+
+    function enemyTurn(){
+      if (enemy.curHP <= 0) return;
+      const { def } = pstats();
+      const result = dmgCalc(enemyStats.atk, def, 0.05);
+      safe("damage", result.amount);
+      uiLog(`${enemy.name} hits you for ${result.amount}${result.crit ? " (CRIT!)" : ""}.`);
+      refreshBars();
+      if (state.hp <= 0){ uiLog("You collapse!"); endCombat(false); return true; }
+      return false;
+    }
+    function playerTurn(){ [btnAttack, btnItem, btnFlee].forEach(b=>b.disabled=false); }
+
+    // Attack
+    btnAttack.onclick = () => {
+      [btnAttack, btnItem, btnFlee].forEach(b=>b.disabled=true);
+      const gate = safe("currentAttackAndCritWithAmmoGate") || {};
+
+      if (gate.usedAmmo && gate.perShot > 0 && gate.ammoId){
+        const ok = safe("consumeAmmo", gate.ammoId, gate.perShot);
+        uiLog(ok ? `[${gate.ammoName} -${gate.perShot}]` : `*Click.* Out of ammo (${gate.ammoName}). You swing your weapon!`);
+      }
+      if (gate.out) uiLog(`*Click.* Out of ammo (${gate.ammoName}). You strike with a melee bash!`);
+
+      const ps = playerBattleStats();
+      const atkBoostActive = (state.buffs?.atkBoost && (state.buffs.atkBoost.turns || state.buffs.atkBoost) > 0);
+      const baseAtk  = (gate.atk  != null ? gate.atk  : ps.atk);
+      const baseCrit = (gate.crit != null ? gate.crit : ps.crit);
+      const totalAtk  = Math.max(1, baseAtk + (atkBoostActive ? 4 : 0));
+      const totalCrit = clamp(baseCrit, 0, 0.5);
+
+      const result = dmgCalc(totalAtk, enemyStats.def, totalCrit);
+      enemy.curHP = Math.max(0, enemy.curHP - result.amount);
+      uiLog(`You hit ${enemy.name} for ${result.amount}${result.crit ? " (CRIT!)" : ""}.`);
+      refreshBars();
+
+      if (enemy.curHP <= 0){ uiLog(`${enemy.name} collapses!`); endCombat(true); return; }
+
+      setTimeout(()=>{ const ended = enemyTurn(); if (!ended) playerTurn(); },150);
+    };
+
+    // Item
+    btnItem.onclick = () => {
+      itemBox.innerHTML = "";
+      safe("migrateInventoryShape");
+      const all = safe("inv") || [];
+      const usable = all.filter(s => (window.ITEMS||{})[s.id]?.use);
+      if (!usable.length){ itemBox.append(el("p","small muted","(No usable items)")); return; }
+      usable.forEach(s=>{
+        const meta = (window.ITEMS||{})[s.id] || {name:s.id};
+        const b = el("button","choice",`${meta.name} ×${s.qty}`);
+        b.onclick = () => {
+          safe("useItem", s.id);
+          uiLog(`You use ${meta.name}.`); refreshBars(); itemBox.innerHTML = "";
+          setTimeout(()=>{ const ended = enemyTurn(); if (!ended) playerTurn(); },150);
+        };
+        itemBox.append(b, el("span","small muted"," "));
+      });
+    };
+
+    // Flee
+    btnFlee.onclick = () => {
+      [btnAttack, btnItem, btnFlee].forEach(b=>b.disabled=true);
+      const ps = pstats(); const pSpd = Number(ps?.spd ?? 0); const eSpd = Number(enemyStats?.spd ?? 0);
+      let base = 0.35 + ((pSpd - eSpd) * 0.03);
+      if (Array.isArray(state?.perks) && state.perks.includes("swift")) base += 0.10;
+      if ((state?.buffs?.fleeBoost ?? 0) > 0) base += 0.15;
+      const fleeChance = clamp(isFinite(base) ? base : 0.35, 0.10, 0.90);
+
+      if (Math.random() < fleeChance){
+        uiLog("You slip away!"); safe("log",`You fled from ${enemy.name}.`); safe("updateUI"); safe("tickBuffs","combat");
+        closeModal();
+        WLCombatEnd.open({ outcome:"flee", xp:0, caps:0, items:[], note:`You escaped from ${enemy.name}.` });
+        return;
+      }
+      uiLog("You fail to escape!");
+      setTimeout(()=>{ const ended = enemyTurn(); if (!ended) playerTurn(); safe("tickBuffs","combat"); },150);
+    };
+
+    enemy.curHP = enemy.curHP ?? enemy.hp;
+    refreshBars(); playerTurn();
+  };
+
+  /* ensure node is under <body> even if something moved it */
+  (function(){ const n=document.getElementById('wl-combat-end'); if(n && n.parentNode!==document.body){ document.body.appendChild(n); }})();
+})();
 </script>
 </body>
 </html>
