@@ -1077,6 +1077,7 @@ function gainXP(n) {
 
     log(`Level up! You are now level ${state.level}. Max HP +${hpGain}.`);
   }
+  updateUI();
 }
 
 // Slightly steeper XP curve to pace the extra power
@@ -1982,6 +1983,7 @@ function explore(){
     damage(10);
     log("Wild dogs attack. HP -10.");
   }
+  updateUI;
 }
 
 function openInventory(){
@@ -3343,201 +3345,454 @@ window.WL_TextMap={world:WORLD,towns:TOWNS,openWorld,travelTo};
   (function(){ const n=document.getElementById('wl-combat-end'); if(n && n.parentNode!==document.body){ document.body.appendChild(n); }})();
 })();
 
-/*  Wastelife — Living World v0.2 (<=200 lines)
-/* Adds: settlements & ownership, meaningful raids/expansion, NPC routes,
-   encounter-rate modifier, trader price pressure hint, Social tab summary. */
+/*  Wastelife — Living World v0.3 (Interactive NPC Core)
+    Phase 1: NPCs at real locations, click-to-interact, trust meter, travel-to-them button.
+    Paste once. Do not keep older LW code alongside this. */
 
 const LW = (() => {
-  /* --- Inputs from host with fallbacks --- */
-  const LOCS = (typeof LOCATIONS!=="undefined"&&LOCATIONS.length?LOCATIONS:
-    ["Dustown","Copper Flats","Juniper Station","Grayridge","Red Mesa"]);
-  const FACS = (typeof FACTIONS!=="undefined"&&FACTIONS.length?FACTIONS:[
-    {id:"settlers",name:"Settlers Union"},{id:"rangers",name:"Desert Rangers"},
-    {id:"scribes",name:"Scribes of the Old World"},{id:"dust_marauders",name:"Dust Marauders"}]);
+  /* ------------ Inputs from host ------------ */
+  const LOCS = (Array.isArray(window.LOCATIONS) && window.LOCATIONS.length)
+    ? window.LOCATIONS
+    : ["Dustown","Copper Flats","Old Boston Ruins"]; // fallback
+  const FACS = (Array.isArray(window.FACTIONS) && window.FACTIONS.length)
+    ? window.FACTIONS
+    : [
+        {id:"none", name:"Unaffiliated"},
+        {id:"settlers",name:"Settlers Union"},
+        {id:"rangers", name:"Desert Rangers"},
+        {id:"scribes", name:"Scribes of the Old World"},
+        {id:"marauders",name:"Dust Marauders"}
+      ];
 
-  /* --- World graph: ring roads across 5 settlements --- */
-  const NODES = LOCS.slice(0,5).map((name,i)=>({name, i, owner:"none"}));
-  const adj = i => [NODES[(i+4)%5], NODES[(i+1)%5]]; // two neighbors (ring)
-
-  /* --- State --- */
-  const world = {
-    tick:0, water:60,
-    faction:Object.fromEntries(FACS.map(f=>[f.id,{id:f.id,name:f.name,caps:80,land:0,recruits:10,hostility:{}}])),
-    npcs:[
-      {id:"joe",  name:"Trader Joe", role:"Trader", node:rndNode(), alive:true},
-      {id:"sara", name:"Merc Sara",  role:"Merc",   node:rndNode(), alive:true},
-      {id:"eli",  name:"Scribe Eli", role:"Scribe", node:rndNode(), alive:true},
+  /* ------------ State ------------ */
+  const S = {
+    tick: 0,
+    water: 60,
+    faction: Object.fromEntries(FACS.map(f => [f.id, {...f, caps:50, land:0, recruits:8}])),
+    npcs: [
+      {id:"joe",  name:"Trader Joe", role:"Trader", trust:50, node:idxOf("Dustown"), alive:true},
+      {id:"sara", name:"Merc Sara",  role:"Merc",   trust:50, node:idxOf("Copper Flats"), alive:true},
+      {id:"eli",  name:"Scribe Eli", role:"Scribe", trust:50, node:idxOf("Old Boston Ruins"), alive:true},
     ],
-    wars:[], news:[]
+    news:[]
   };
 
-  /* --- Small helpers --- */
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const pick=a=>a[Math.floor(Math.random()*a.length)];
-  const logSafe = s => { try{ log(s); }catch{ console.log("[WORLD]",s);} };
-  function rndNode(){ return NODES[Math.floor(Math.random()*NODES.length)].i; }
-  function pushNews(t){ world.news.push(t); if(world.news.length>40) world.news.shift(); }
-  function power(f){ return Math.max(1, Math.round(f.recruits + 4*f.land)); }
-  function setOwner(node, facId){ const old = node.owner; node.owner = facId; if(facId!=="none"){ world.faction[facId].land++; } if(old!=="none"){ world.faction[old].land = Math.max(0, world.faction[old].land-1); } }
-  function hostile(a,b,delta){ a.hostility[b]=(a.hostility[b]||0)+delta; }
-
-  /* --- Public feel: encounter & trade modifiers --- */
-  function encounterMod(){
-    const war = world.wars.some(w=>w.active) ? 1.25 : 1.0;
-    const drought = world.water<35 ? 1.25 : 1.0;
-    return +(war*drought).toFixed(2);
-  }
-  function pricePressure(nodeIndex){
-    const n = NODES[nodeIndex]||NODES[0];
-    const owner = n.owner;
-    const scarcity = (100-world.water)/200;               // 0..0.5
-    const tariffs = (owner==="dust_marauders")?0.25:0;    // raider tax
-    return +(1 + scarcity + tariffs).toFixed(2);
-  }
-
-  /* --- One tick per year (called after Age Up) --- */
-  function tick(){
-    world.tick++;
-    economy();
-    aiTurns();
-    moveNPCs();
-    climate();
-    ensureSocialButton();
-  }
-
-  /* 1) Money in/out; recruit drift */
-  function economy(){
-    Object.values(world.faction).forEach(f=>{
-      const income = 10 + 3*f.land + Math.floor(Math.random()*8);
-      const upkeep = Math.floor(f.recruits*0.6);
-      f.caps = Math.max(0, f.caps + income - upkeep);
-      if (f.caps>50 && Math.random()<0.4){ f.recruits++; f.caps-=12; pushNews(`${f.name} recruits.`); }
-      if (f.caps<15 && f.recruits>6 && Math.random()<0.3){ f.recruits--; pushNews(`${f.name} loses a fighter to desertion.`); }
-    });
-  }
-
-  /* 2) Each faction chooses an action: expand or raid */
-  function aiTurns(){
-    world.wars = []; // reset list each year
-    FACS.forEach(f=>{
-      const F = world.faction[f.id];
-      if (!F) return;
-      // pick a frontier node (one of the adjacents of owned, else any)
-      const owned = NODES.filter(n=>n.owner===f.id);
-      const front = owned.length? [...new Set(owned.flatMap(n=>adj(n.i)))]:NODES;
-      const target = pick(front);
-      if (target.owner==="none" && F.caps>=25){
-        // expand
-        F.caps-=15; setOwner(target, f.id);
-        pushNews(`${F.name} occupies ${target.name}.`);
-      } else if (target.owner && target.owner!=="none" && target.owner!==f.id) {
-        // raid neighbor owner
-        const DEF = world.faction[target.owner];
-        const Ap = Math.round(power(F) * (world.water<35?1.1:1));
-        const Dp = power(DEF);
-        world.wars.push({a:f.id,d:target.owner,where:target.name,active:true});
-        if (Ap>Dp){ setOwner(target, f.id); pushNews(`${F.name} seizes ${target.name} from ${DEF.name}.`); logSafe(`War at ${target.name}: ${F.name} takes control.`); }
-        else { pushNews(`${F.name} fails to take ${target.name}.`); }
-        if (Math.random()<0.6) F.recruits = Math.max(1, F.recruits-1);
-        if (Math.random()<0.8) DEF.recruits = Math.max(1, DEF.recruits-1);
-        hostile(F, DEF.id, -8); hostile(DEF, F.id, -10);
-        // collateral on NPCs near that node
-        hitNearbyNPCs(target.i);
-      }
-    });
-  }
-
-  /* 3) NPCs walk the ring; hazards during drought/war */
-  function moveNPCs(){
-    world.npcs.forEach(n=>{
-      if(!n.alive) return;
-      // move along road
-      n.node = Math.random()<0.5 ? (n.node+1)%NODES.length : (n.node+NODES.length-1)%NODES.length;
-      // hazards
-      const danger = (world.water<35?0.08:0.03) + (warAtNode(n.node)?0.07:0);
-      if (Math.random()<danger){
-        if (Math.random()<0.35){ n.alive=false; pushNews(`${n.name} died near ${NODES[n.node].name}.`); logSafe(`${n.name} met a grim fate on the road.`); }
-        else { pushNews(`${n.name} was ambushed near ${NODES[n.node].name} but escaped.`); }
-      }
-    });
-  }
-  function warAtNode(i){ return world.wars.some(w=>w.active && w.where===NODES[i].name); }
-  function hitNearbyNPCs(i){
-    world.npcs.filter(x=>x.alive && (x.node===i || adj(i).some(a=>a.i===x.node)))
-      .forEach(v=>{ if(Math.random()<0.25){ v.alive=false; pushNews(`${v.name} killed during clashes at ${NODES[i].name}.`); }});
-  }
-
-  /* 4) Climate nudges everything (drives raids & prices) */
-  function climate(){
-    world.water = clamp(world.water + (Math.random()*6-3), 0, 100);
-    if (Math.random()<0.10){ world.water = clamp(world.water-12, 0, 100); pushNews("Drought deepens across the flats."); }
-    if (Math.random()<0.06){ world.water = clamp(world.water+15, 0, 100); pushNews("Seasonal rains refill cisterns."); }
-    if (world.water<30 && Math.random()<0.4) logSafe("Water shortage worsens. Expect more hostile encounters.");
-  }
-
-  /* --- UI: Social modal + button --- */
-  function ensureSocialButton(){
-    const group = document.querySelector(".actions .group");
-    if (!group || document.getElementById("btn-social")) return;
-    const b=document.createElement("button"); b.id="btn-social"; b.textContent="Social / Map";
-    b.onclick=openSocial; group.appendChild(b);
-  }
-  function openSocial(){
-    const rowsF = FACS.map(f=>{
-      const F = world.faction[f.id]; return `<tr><td>${F.name}</td><td>${F.caps}</td><td>${F.recruits}</td><td>${F.land}</td></tr>`;
-    }).join("");
-    const rowsS = NODES.map(n=>`<tr><td>${n.name}</td><td>${fName(n.owner)}</td></tr>`).join("");
-    const rowsN = world.npcs.filter(n=>n.alive).map(n=>`<tr><td>${n.name}</td><td>${n.role}</td><td>${NODES[n.node].name}</td></tr>`).join("") || `<tr><td colspan="3">No known survivors.</td></tr>`;
-    const news = world.news.slice(-7).map(s=>`<li>${s}</li>`).join("") || "<li>(quiet)</li>";
-    showModal("SOCIAL — Living World", `
-      <div class="faction-header" style="margin:6px 0">Water: <b>${world.water.toFixed(0)}</b> ▸ Tick: <b>${world.tick}</b> ▸ Encounter x<b>${encounterMod()}</b></div>
-      <div class="kv">
-        <div>Factions</div><div><table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
-          <thead><tr><th align="left">Name</th><th>Caps</th><th>Recruits</th><th>Land</th></tr></thead><tbody>${rowsF}</tbody></table></div>
-        <div>Settlements</div><div><table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
-          <thead><tr><th align="left">Name</th><th align="left">Owner</th></tr></thead><tbody>${rowsS}</tbody></table></div>
-        <div>Known NPCs</div><div><table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
-          <thead><tr><th align="left">Name</th><th>Role</th><th align="left">Last Seen</th></tr></thead><tbody>${rowsN}</tbody></table></div>
-        <div>Recent News</div><div><ul style="margin:6px 0 0 18px">${news}</ul></div>
-      </div>`);
-  }
-  function fName(id){ return (id==="none"?"Unaffiliated":(world.faction[id]?.name||id)); }
-  function showModal(title, html){
-    const mb=document.getElementById("modal-backdrop"), mt=document.getElementById("modal-title"), mc=document.getElementById("modal-content");
+  /* ------------ Helpers ------------ */
+  const pick = a => a[Math.floor(Math.random()*a.length)];
+  const here = () => (window.state?.location || LOCS[0]);
+  function idxOf(loc){ const i = LOCS.indexOf(loc); return i >= 0 ? i : 0; }
+  function pushNews(t){ S.news.push(t); if (S.news.length>40) S.news.shift(); }
+  function logSafe(s){ try{ log(s); }catch{ console.log("[WORLD]", s);} }
+  function showModalSimple(title, html){
+    const mb=document.getElementById("modal-backdrop"),
+          mt=document.getElementById("modal-title"),
+          mc=document.getElementById("modal-content");
     if(!mb||!mt||!mc) return alert(title+"\n\n"+html.replace(/<[^>]+>/g,""));
     mt.textContent=title; mc.innerHTML=html; mb.style.display="grid";
   }
 
-  /* --- Hook into host buttons --- */
-  function patch(){
-    // run after Age Up to simulate a year
-    const age=document.getElementById("btn-age");
-    if(age && !age.dataset._lw){ age.dataset._lw=1; age.addEventListener("click", ()=>setTimeout(tick,0)); }
-    // trader: show price pressure hint tied to player location node
-    const trade=document.getElementById("btn-trade");
-    if(trade && !trade.dataset._lw){ trade.dataset._lw=1; trade.addEventListener("click", ()=>{
-      const here = (typeof state!=="undefined" && state?.location) ? NODES.findIndex(n=>n.name===state.location) : 0;
-      const mod = pricePressure(here>=0?here:0);
-      logSafe(`Market watch: prices near ${NODES[(here>=0?here:0)].name} are ~${Math.round((mod-1)*100)}% higher due to ${world.water<35?"water shortage":"local tariffs/conditions"}.`);
-    });}
-    // encounter rate: multiply maybeStartCombat if present
-    if (typeof window.maybeStartCombat==="function" && !window.maybeStartCombat._lwWrapped){
-      const orig = window.maybeStartCombat;
-      window.maybeStartCombat = function(prob,tier,src){ return orig(prob*encounterMod(), tier, src); };
-      window.maybeStartCombat._lwWrapped = true;
-    }
-    // close button safety
-    const c=document.getElementById("modal-close"); if(c && !c.dataset._lw){ c.dataset._lw=1; c.addEventListener("click",()=>{ const mb=document.getElementById("modal-backdrop"); if(mb) mb.style.display="none";}); }
+  /* ------------ Movement & Yearly Tick ------------ */
+  function moveNPCs(){
+    S.npcs.forEach(n=>{
+      if(!n.alive) return;
+      if (Math.random()<0.45) {                      // wander occasionally
+        n.node = (n.node + (Math.random()<0.5 ? 1 : -1) + LOCS.length) % LOCS.length;
+      }
+    });
+  }
+  function tick(){
+    S.tick++;
+    moveNPCs();
+    pushNews(`The year ${2165+S.tick} passes in the wastes...`);
+    ensureSocialButton();
   }
 
-  /* --- Boot --- */
-  function init(){ patch(); ensureSocialButton(); setTimeout(tick,0); }
-  if (document.readyState==="loading") document.addEventListener("DOMContentLoaded", init); else init();
+  /* ------------ Social UI ------------ */
+  function ensureSocialButton(){
+    const group=document.querySelector(".actions .group");
+    if(!group || document.getElementById("btn-social")) return;
+    const b=document.createElement("button");
+    b.id="btn-social"; b.textContent="Social / Map";
+    b.onclick=openSocial;
+    group.appendChild(b);
+  }
 
-  /* expose a tiny API */
-  return { world, NODES, encounterMod, pricePressure, openSocial };
+  function openSocial(){
+    const rowsF = FACS.map(f=>{
+      const F=S.faction[f.id]; if(!F) return "";
+      return `<tr><td>${F.name}</td><td>${F.caps}</td><td>${F.recruits}</td></tr>`;
+    }).join("");
+
+    const rowsN = S.npcs.filter(n=>n.alive).map(n=>
+      `<tr>
+         <td><button class="choice" onclick="LW.openNPC('${n.id}')">${n.name}</button></td>
+         <td>${n.role}</td>
+         <td>${LOCS[n.node]}</td>
+       </tr>`
+    ).join("") || `<tr><td colspan="3">No survivors</td></tr>`;
+
+    const news = S.news.slice(-7).map(s=>`<li>${s}</li>`).join("") || "<li>(quiet)</li>";
+
+    showModalSimple("Social — NPCs", `
+      <div class="title">Factions</div>
+      <table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
+        <tr><th align="left">Name</th><th>Caps</th><th>Recruits</th></tr>
+        ${rowsF}
+      </table>
+      <div class="title" style="margin-top:8px">NPCs</div>
+      <table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
+        <tr><th align="left">Name</th><th>Role</th><th align="left">Location</th></tr>
+        ${rowsN}
+      </table>
+      <div class="title" style="margin-top:8px">Recent News</div>
+      <ul style="margin:6px 0 0 18px">${news}</ul>
+    `);
+  }
+
+  /* ------------ Interactions ------------ */
+  function openNPC(n) {
+    // accept id or object
+    const npc = (typeof n === "string") ? S.npcs.find(x=>x.id===n && x.alive) : n;
+    if(!npc){ showModalSimple("NPC not found",""); return; }
+
+    const npcLoc = LOCS[npc.node] || "Unknown";
+    const playerLoc = here();
+    const nearby = (npcLoc === playerLoc);
+
+    let html = `
+      <p><b>${npc.name}</b> (${npc.role})<br>
+      Location: ${npcLoc}${nearby ? " (nearby)" : ""}<br>
+      Trust: ${npc.trust ?? 0}</p>
+    `;
+
+    if (!nearby) {
+      html += `
+        <button class="choice" onclick="LW._travelTo('${npcLoc}')">Travel to ${npcLoc}</button>
+      `;
+    } else {
+      // role-specific actions when nearby
+      if (npc.role === "Trader") {
+        html += `
+          <button class="choice" onclick="LW.talk('${npc.id}','trade')">Trade</button>
+          <button class="choice" onclick="LW.talk('${npc.id}','rumor')">Ask for Rumors</button>
+        `;
+      } else if (npc.role === "Merc") {
+        html += `
+          <button class="choice" onclick="LW.talk('${npc.id}','hire')">Hire as Guard</button>
+          <button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>
+        `;
+      } else if (npc.role === "Scribe") {
+        html += `
+          <button class="choice" onclick="LW.talk('${npc.id}','lore')">Share Knowledge</button>
+          <button class="choice" onclick="LW.talk('${npc.id}','request')">Request Research</button>
+        `;
+      } else {
+        html += `<button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>`;
+      }
+    }
+
+    showModalSimple(npc.name, html);
+  }
+
+  function talk(id, action){
+    const npc = S.npcs.find(n=>n.id===id && n.alive);
+    if(!npc) return;
+    const npcLoc = LOCS[npc.node] || "Unknown";
+    const playerLoc = here();
+    const nearby = (npcLoc === playerLoc);
+
+    let out = "";
+    let trustDelta = 0;
+
+    if (!nearby && action!=="rumor") {
+      showModalSimple(npc.name, `<p>${npc.name} is at ${npcLoc}. Travel there first.</p>`);
+      return;
+    }
+
+    switch (action) {
+      case "trade":
+        out = `${npc.name} lays out wares. (Hook your trade UI here; apply price mods if needed.)`;
+        trustDelta = 1;
+        break;
+      case "rumor":
+        out = `${npc.name} shares rumors about faction movements.`;
+        trustDelta = 2;
+        break;
+      case "hire": {
+        const cost = 15;
+        if ((window.state?.caps || 0) >= cost) {
+          window.state.caps -= cost;
+          out = `${npc.name} agrees to guard you for a while. (Stub: push to companions.)`;
+          trustDelta = 3;
+          window.updateUI?.();
+        } else {
+          out = `${npc.name}: "Come back with ${cost} caps."`;
+        }
+        break;
+      }
+      case "lore":
+        out = `${npc.name} teaches you pre-war tech insights. (+10 XP stub)`;
+        window.gainXP?.(10);
+        trustDelta = 2;
+        break;
+      case "request":
+        out = `${npc.name}: "Bring me a Holotape and I'll share a schematic."`;
+        trustDelta = 1;
+        break;
+      case "chat":
+      default:
+        out = `${npc.name} chats about the road.`;
+        trustDelta = 1;
+        break;
+    }
+
+    npc.trust = Math.min(100, (npc.trust || 0) + trustDelta);
+    pushNews(out);
+    logSafe(out);
+    showModalSimple(npc.name, `<p>${out}</p><p>Trust now: ${npc.trust}</p>`);
+  }
+
+  /* ------------ Travel helper (optional) ------------ */
+  function travelTo(target){
+    if (!target) return;
+    const hereBefore = here();
+    if (hereBefore === target) { logSafe(`Already at ${target}.`); return; }
+
+    // If you have your own Travel modal/system, call it here instead:
+    window.state && (window.state.location = target);
+    logSafe(`You travel from ${hereBefore} to ${target}.`);
+    window.updateUI?.();
+
+    // Advance world time if you use action-based ticking
+    try { WorldSim?.advanceTime?.("travel"); } catch {}
+    try { closeModal?.(); } catch {}
+  }
+
+  /* ------------ Patching & boot ------------ */
+  function patch(){
+    // Age Up drives yearly tick
+    const age=document.getElementById("btn-age");
+    if(age && !age.dataset._lw){ age.dataset._lw=1; age.addEventListener("click", ()=>setTimeout(tick,0)); }
+    // Close modal safety
+    const c=document.getElementById("modal-close");
+    if(c && !c.dataset._lw){ c.dataset._lw=1; c.addEventListener("click",()=>{document.getElementById("modal-backdrop").style.display="none";}); }
+  }
+  function init(){ patch(); ensureSocialButton(); }
+
+  if (document.readyState==="loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+
+  /* public API */
+  return {
+    state: S,
+    openSocial,
+    openNPC,
+    talk,
+    _travelTo: travelTo,   // used by the “Travel to” button in NPC modal
+  };
+})();
+// ==== Unify Locations v1 (shim) ====
+// Goal: make player/NPC/Map share the same place identity with minimal changes.
+
+// 1) Canonical registry + aliases (adjust as your world grows)
+const LOC_CANON = {
+  dustown:       { name: "Dustown",        type: "town" },
+  copper_flats:  { name: "Copper Flats",   type: "town" },
+  old_boston:    { name: "Old Boston Ruins", type: "town" },
+  juniper:       { name: "Juniper Station", type: "town" },
+  vault47:       { name: "Vault 47",       type: "town" },
+  grayridge:     { name: "Grayridge",      type: "town" },
+  red_mesa:      { name: "Red Mesa",       type: "town" },
+  harbor_nine:   { name: "Harbor Nine",    type: "town" },
+
+  // wilderness from Text Map
+  dunes:         { name: "Wasteland Dunes", type: "wild" },
+  ruins_zone:    { name: "Cracked Ruins",   type: "wild" },
+  flats_zone:    { name: "Salt Flats",      type: "wild" },
+  canyon:        { name: "Red Canyons",     type: "wild" },
+  swamp:         { name: "Irrad. Swamp",    type: "wild" },
+};
+
+// If two systems use slightly different names, map them here → canonical id.
+const LOC_ALIASES = {
+  // towns
+  "dustown": "dustown",
+  "dustford": "dustown",       // unify Dustford→Dustown (rename later if you like)
+  "copper flats": "copper_flats",
+  "old boston ruins": "old_boston",
+  "juniper station": "juniper",
+  "vault 47": "vault47",
+  "grayridge": "grayridge",
+  "ironwood": "grayridge",     // pick one; change if Ironwood should be separate
+  "red mesa": "red_mesa",
+  "harbor nine": "harbor_nine",
+
+  // wild
+  "wasteland dunes": "dunes",
+  "cracked ruins": "ruins_zone",
+  "salt flats": "flats_zone",
+  "red canyons": "canyon",
+  "irrad. swamp": "swamp",
+};
+
+// Helpers
+function _slugName(s){ return String(s||"").toLowerCase().replace(/[^\w]+/g," ").trim(); }
+function locIdFromAny(x){
+  if (!x) return null;
+  // If it's already a known id
+  if (LOC_CANON[x]) return x;
+  // If it's a display name or foreign id/name, try aliasing
+  const key = _slugName(x);
+  const id  = LOC_ALIASES[key] || null;
+  return id && LOC_CANON[id] ? id : null;
+}
+function locName(id){ return LOC_CANON[id]?.name || String(id||"Unknown"); }
+
+// 2) Player location: keep both name (legacy) and canonical id
+if (!state.locationId) {
+  // try to migrate existing state.location
+  state.locationId = locIdFromAny(state.location) || "dustown";
+  state.location = locName(state.locationId);
+}
+
+// Wrap a single travel function used by *everything*
+function travelToId(id){
+  const cid = locIdFromAny(id);
+  if (!cid) { console.warn("[LOC] Unknown destination:", id); return; }
+  if (state.locationId === cid) { log(`Already at ${locName(cid)}.`); return; }
+  const from = locName(state.locationId);
+  state.locationId = cid;
+  state.location   = locName(cid); // keep UI in sync
+  log(`You travel from ${from} to ${state.location}.`);
+  updateUI?.();
+  try { closeModal?.(); } catch {}
+}
+
+// 3) Patch Text Map travel to use our canonical helper
+(function(){
+  const _travel = window.travelTo;
+  if (typeof _travel === "function"){
+    window.travelTo = function(id){
+      // id is like "dunes", "ruins", "dustford" etc.
+      travelToId(id);
+    };
+  }
 })();
 
+// 4) Patch LW helpers to use canonical location ids for both player and NPCs
+(function(){
+  if (!window.LW) return;
+  const L = window.LW;
+
+  // Where am I?
+  const _here = L.here || (() => state.location);
+  L.here = function(){
+    // Return *name* for legacy callers, but ensure it comes from canonical id
+    return locName(state.locationId);
+  };
+
+  // NPC storage: convert any numeric node index → canonical id once at boot
+  const S = L.state;
+  if (S && Array.isArray(S.npcs)){
+    const locsArray = Array.isArray(window.LOCATIONS) ? window.LOCATIONS : [];
+    S.npcs.forEach(n => {
+      // If node is a number (index into LOCATIONS), resolve name then id
+      if (typeof n.node === "number" && locsArray[n.node]){
+        const id = locIdFromAny(locsArray[n.node]);
+        n.locId = id || state.locationId;
+      } else if (typeof n.node === "string"){
+        // It might already be a name
+        n.locId = locIdFromAny(n.node) || state.locationId;
+      } else if (!n.locId){
+        n.locId = state.locationId; // fallback
+      }
+      delete n.node; // retire the old field
+    });
+  }
+
+  // When LW moves NPCs, keep using canonical ids (simple wander demo)
+  L.moveNPCs = function(){
+    const order = Object.keys(LOC_CANON); // simple ring; customize per-graph later
+    S.npcs.forEach(n => {
+      if (!n.alive) return;
+      if (Math.random() < 0.45){
+        const i = Math.max(0, order.indexOf(n.locId));
+        const j = (i + (Math.random()<0.5?-1:1) + order.length) % order.length;
+        n.locId = order[j];
+      }
+    });
+  };
+
+  // Upgrade the Social modal: show only nearby by default, with a toggle
+  const _openSocial = L.openSocial;
+  L.openSocial = function(){
+    const hereId = state.locationId;
+    const all = S.npcs.filter(n => n.alive);
+    const nearby = all.filter(n => n.locId === hereId);
+    const other  = all.filter(n => n.locId !== hereId);
+
+    const rows = (list) => list.map(n =>
+      `<tr>
+        <td><button class="choice" onclick="LW.openNPC('${n.id}')">${n.name}</button></td>
+        <td>${n.role}</td>
+        <td>${locName(n.locId)}</td>
+      </tr>`).join("") || `<tr><td colspan="3">—</td></tr>`;
+
+    showModalSimple("Social — NPCs", `
+      <div class="title">Here in ${locName(hereId)}</div>
+      <table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
+        <tr><th align="left">Name</th><th>Role</th><th align="left">Location</th></tr>
+        ${rows(nearby)}
+      </table>
+      <div class="hr"></div>
+      <details>
+        <summary class="linklike">Show NPCs in other locations</summary>
+        <table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse">
+          <tr><th align="left">Name</th><th>Role</th><th align="left">Location</th></tr>
+          ${rows(other)}
+        </table>
+      </details>
+    `);
+  };
+
+  // Enforce “must be here to interact” and offer travel
+  const _openNPC = L.openNPC;
+  L.openNPC = function(idOrObj){
+    const npc = (typeof idOrObj === "string")
+      ? S.npcs.find(x => x.id === idOrObj && x.alive)
+      : idOrObj;
+    if (!npc){ showModalSimple("NPC not found",""); return; }
+
+    const hereId = state.locationId;
+    const near   = (npc.locId === hereId);
+    let html = `
+      <p><b>${npc.name}</b> (${npc.role})<br>
+      Location: ${locName(npc.locId)}${near ? " (nearby)" : ""}<br>
+      Trust: ${npc.trust ?? 0}</p>
+    `;
+
+    if (!near){
+      html += `<button class="choice" onclick="(function(){ travelToId('${npc.locId}'); LW.openNPC('${npc.id}'); })()">Travel to ${locName(npc.locId)}</button>`;
+    } else {
+      // same actions you had before, unchanged
+      html += `
+        <button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>
+        <button class="choice" onclick="LW.talk('${npc.id}','rumor')">Ask for Rumors</button>
+      `;
+      if (npc.role === "Trader"){
+        html += `<button class="choice" onclick="LW.talk('${npc.id}','trade')">Trade</button>`;
+      }
+      if (npc.role === "Merc"){
+        html += `<button class="choice" onclick="LW.talk('${npc.id}','hire')">Hire as Guard</button>`;
+      }
+      if (npc.role === "Scribe"){
+        html += `<button class="choice" onclick="LW.talk('${npc.id}','lore')">Share Knowledge</button>`;
+      }
+    }
+
+    showModalSimple(npc.name, html);
+  };
+})();
 </script>
 </body>
 </html>
