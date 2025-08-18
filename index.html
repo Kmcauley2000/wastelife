@@ -872,8 +872,8 @@ function currentAttackAndCritWithAmmoGate(){
 // - Add new perks in PERKS[]
 
 const NAMES = ["Ash","Rae","Piper","Vale","Rook","Nova","Jax","Morgan","Quinn","Alex","Harper","Rowan","Kit","Dak","Remy","Skye","Indy","Jet","Mack","Sable","Rune","Tess","Wren","Zed"];
-const ORIGINS = ["Vault-Born","Wastelander","Settlement Kid","Ghoul-Friendly Enclave"];
-const LOCATIONS = ["Dustown","Copper Flats","Old Boston Ruins","Juniper Station","Vault 47","Grayridge","Red Mesa","Harbor Nine"];
+const ORIGINS = ["Wastelander","Settlement Kid","Dust-towner"];
+const LOCATIONS = ["Dustown","Ironwood", "Wasteland Dunes", "Cracked Ruins", "Salt Flats", "Red Canyons", "Irrad. Swamp",];
 const JOBS = [
   { id:"none",   name:"Unemployed",       minAge:0,  base: 0,              req: ()=>true },
 
@@ -3597,14 +3597,7 @@ const LW = (() => {
 // 1) Canonical registry + aliases (adjust as your world grows)
 const LOC_CANON = {
   dustown:       { name: "Dustown",        type: "town" },
-  copper_flats:  { name: "Copper Flats",   type: "town" },
-  old_boston:    { name: "Old Boston Ruins", type: "town" },
-  juniper:       { name: "Juniper Station", type: "town" },
-  vault47:       { name: "Vault 47",       type: "town" },
-  grayridge:     { name: "Grayridge",      type: "town" },
-  red_mesa:      { name: "Red Mesa",       type: "town" },
-  harbor_nine:   { name: "Harbor Nine",    type: "town" },
-
+  ironwood:      { name: "Ironwood",       type: "town" },
   // wilderness from Text Map
   dunes:         { name: "Wasteland Dunes", type: "wild" },
   ruins_zone:    { name: "Cracked Ruins",   type: "wild" },
@@ -3618,14 +3611,8 @@ const LOC_ALIASES = {
   // towns
   "dustown": "dustown",
   "dustford": "dustown",       // unify Dustford→Dustown (rename later if you like)
-  "copper flats": "copper_flats",
-  "old boston ruins": "old_boston",
-  "juniper station": "juniper",
-  "vault 47": "vault47",
-  "grayridge": "grayridge",
-  "ironwood": "grayridge",     // pick one; change if Ironwood should be separate
-  "red mesa": "red_mesa",
-  "harbor nine": "harbor_nine",
+  "ironwood": "ironwood",
+};
 
   // wild
   "wasteland dunes": "dunes",
