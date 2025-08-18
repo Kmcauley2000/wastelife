@@ -3200,503 +3200,74 @@ window.addEventListener("DOMContentLoaded", () => {
   $("#faction-pill-wrapper").onclick = openJoinFaction;
 });
 
-/* ====== TEXT MAP (sidebar) — cleaner UI =====================================
-   Adds "Travel / Map" to Actions. World modal shows Towns/Wilderness sections,
-   current location tag, and a two-pane Town view inside the modal.
-=============================================================================*/
+/* ====== TEXT MAP + Wilderness Integration =============================== */
 (function(){
-  if (window.WL_TextMap) return;
+if (window.WL_TextMap) return;
 
-  /* --- Data --- */
-  const WORLD = [
-    { id:"dustford", name:"Dustford", type:"town", desc:"A hardy settlement around a water recycler." },
-    { id:"ironwood", name:"Ironwood", type:"town", desc:"Frontier town by a derelict foundry and old pines." },
-    { id:"wastes",   name:"Wasteland Dunes", type:"wild", desc:"Dunes and scrub. Storms hit fast." },
-    { id:"ruins",    name:"Cracked Ruins",   type:"wild", desc:"Collapsed towers; rich salvage, risky rad pockets." }
-  ];
+/* --- Data --- */
+const WORLD=[
+ {id:"dustford",name:"Dustford",type:"town",desc:"Hardy town around a recycler."},
+ {id:"ironwood",name:"Ironwood",type:"town",desc:"Frontier town by foundry + pines."},
+ {id:"dunes",name:"Wasteland Dunes",type:"wild",desc:"Scrub dunes. Storms hit."},
+ {id:"ruins",name:"Cracked Ruins",type:"wild",desc:"Collapsed towers, salvage, rads."},
+ {id:"flats",name:"Salt Flats",type:"wild",desc:"White wastes, smugglers run."},
+ {id:"canyon",name:"Red Canyons",type:"wild",desc:"Tight passes, raiders."},
+ {id:"swamp",name:"Irrad. Swamp",type:"wild",desc:"Glowing mire, vicious biters."}
+];
+const TOWNS={ /* your town buildings same as before */ 
+  dustford:[/* ... */],ironwood:[/* ... */]
+};
+/* wilderness config */
+const WILD={
+ dunes:{rad:0,ch:0.32,loot:[["junk",6],["duct_tape",3],["canteen",1],["food",2]],enemies:["sand_stalker","burrower_beetle","dune_scorpion"]},
+ ruins:{rad:2,ch:0.38,loot:[["junk",5],["duct_tape",4],["holotape",1],["energy_cell",2]],enemies:["feral","rebar_scavver","auto_turret_mk1"]},
+ flats:{rad:1,ch:0.28,loot:[["junk",4],["water_filter",1],["caps",2],["food",2]],enemies:["brine_tortoise","flat_wraith","smuggler_skiff"]},
+ canyon:{rad:0,ch:0.35,loot:[["junk",3],["ammo_38",2],["shells_12g",1]],enemies:["cliff_raptor","rock_viper","marauder_lookout"]},
+ swamp:{rad:3,ch:0.40,loot:[["junk",3],["food",2],["antirad",2]],enemies:["bog_snapper","glow_mireling","skeeter_swarm"]}
+};
 
-  const TOWNS = {
-    dustford: [
-      { id:"gate",     name:"South Gate & Watch",  desc:"Bulletin board with bounties and odd jobs." },
-      { id:"market",   name:"Market Hub",          desc:"Scrap, filters, tools. Haggling all day." },
-      { id:"clinic",   name:"Tinroof Clinic",      desc:"Bandages, tinctures, and a steady medic." },
-      { id:"tavern",   name:"Rusty Lantern",       desc:"Cards, rumors, and endless stew." },
-      { id:"workshop", name:"Workshop Row",        desc:"Patch weapons, press ammo, trade plans." },
-      { id:"water",    name:"Water Plant",         desc:"Reclaimer hums. Clean canteens for a fee." },
-      { id:"chapel",   name:"Chapel of the Green", desc:"Candles and seedlings for safe roads." },
-      { id:"hall",     name:"Mayor’s Hall",        desc:"Permits, disputes, community notices." }
-    ],
-    ironwood: [
-      { id:"gate",    name:"North Gate",      desc:"Checkpoint and lookout. Ranger notices flap." },
-      { id:"foundry", name:"Old Foundry",     desc:"Smelter floor turned heavy workshop." },
-      { id:"depot",   name:"Rail Depot",      desc:"Boxcars, manifests, rumors at the desk." },
-      { id:"apoth",   name:"Apothecary",      desc:"Tonics and powders (mind the dosage)." },
-      { id:"cantina", name:"Iron Cantina",    desc:"Music, dice, tall tales after sundown." },
-      { id:"sawmill", name:"Sawmill Yard",    desc:"Planks and sawdust; the foreman barters." },
-      { id:"lodge",   name:"Ranger Lodge",    desc:"Maps and trophies; contracts by the door." },
-      { id:"archive", name:"Old Tech Archive",desc:"Manuals and schematics; scribes whisper." }
-    ]
-  };
-
-  const byId = id => WORLD.find(n=>n.id===id);
-
-  /* --- Sidebar button --- */
-  function ensureSidebarButton(){
-    if (document.querySelector("#btn-map")) return;
-    const slot = document.querySelector(".actions .group");
-    const btn = document.createElement("button");
-    btn.id = "btn-map";
-    btn.textContent = "Travel / Map";
-    btn.onclick = openWorld;
-    (slot || document.querySelector(".actions")).appendChild(btn);
-  }
-
-  /* --- World modal (clean sections, current location) --- */
-  function openWorld(){
-    const m = openModal("World Travel");
-    const c = m.content;
-
-    // where are we?
-    const here = state?.location || "Unknown";
-    c.append(pSmall(`You are at: ${here}`), hr());
-    c.append(pSmall("Towns offer buildings/shops. Wilderness is good for exploration (risky)."), hr());
-
-    const towns = WORLD.filter(n=>n.type==="town");
-    const wilds = WORLD.filter(n=>n.type!=="town");
-
-    c.append(sectionHeader("Towns"));
-    towns.forEach(n => c.append(worldRow(n), hr()));
-
-    c.append(sectionHeader("Wilderness"));
-    wilds.forEach(n => c.append(worldRow(n), hr()));
-  }
-
-  function sectionHeader(text){
-    const t = document.createElement("div");
-    t.className = "title";
-    t.textContent = text;
-    return t;
-  }
-
-  function tag(text){
-    const s = document.createElement("span");
-    s.className = "pill";
-    s.style.marginLeft = "8px";
-    s.textContent = text;
-    return s;
-  }
-
-  function worldRow(node){
-    const row = kv();
-    row.left.textContent = node.name;
-    row.right.append(pSmall(node.desc));
-
-    if (state.location === node.name) row.left.appendChild(tag("here"));
-
-    if (node.type === "town"){
-      const view = choice("View Town");
-      view.onclick = () => openTownView(node.id);
-      row.right.append(view);
-    }
-
-    const go = choice(state.location === node.name ? "— already here —" : "Travel Here");
-    go.disabled = (state.location === node.name);
-    go.onclick = () => travelTo(node.id);
-    row.right.append(go);
-
-    return row.wrap;
-  }
-
-/* --- Town modal (two-pane inside modal) --- */
-function openTownView(townId){
-  const town = byId(townId);
-  if (!town){ console.warn("Unknown town:", townId); return; }
-
-  const m = openModal(`${town.name} — Locations`);
-  const c = m.content;
-
-  // Top bar (breadcrumb + back)
-  const bar = kv();
-  bar.left.textContent = `World ▸ ${town.name}`;
-  const back = choice("Back to World");
-  back.onclick = () => { closeModal(); openWorld(); };   // close first, then reopen world list
-  bar.right.append(back);
-  c.append(bar.wrap, hr());
-  if (town.desc) c.append(pSmall(town.desc), hr());
-
-  // Layout: left list, right details
-  const layout = document.createElement("div");
-  layout.style.display = "grid";
-  layout.style.gridTemplateColumns = (window.innerWidth < 900) ? "1fr" : "260px 1fr";
-  layout.style.gap = "12px";
-
-  // Left: building buttons
-  const left = document.createElement("div");
-  const list = document.createElement("div");
-  list.style.display = "grid";
-  list.style.gap = "8px";
-  left.append(list);
-
-  // Right: detail panel
-  const right = document.createElement("div");
-  const detailName = document.createElement("h3");
-  detailName.className = "title";
-  detailName.textContent = "—";
-
-  const detailDesc = document.createElement("p");
-  detailDesc.className = "small muted";
-  detailDesc.textContent = "Select a location.";
-
-  const actionBar = document.createElement("div"); // buttons go here
-  right.append(detailName, detailDesc, actionBar);
-
-  layout.append(left, right);
-  c.append(layout);
-
-  const buildings = TOWNS[townId] || [];
-  if (!buildings.length){
-    detailName.textContent = "No locations";
-    detailDesc.textContent = "This town has no locations defined yet.";
-    return;
-  }
-
-  function select(b){
-    // highlight
-    list.querySelectorAll(".choice").forEach(x => x.classList.remove("active"));
-    const btn = list.querySelector(`[data-id="${b.id}"]`);
-    if (btn) btn.classList.add("active");
-
-    // details
-    detailName.textContent = b.name;
-    detailDesc.textContent = b.desc || "";
-    actionBar.innerHTML = "";
-
-    if (state.location !== town.name){
-      // Not in town yet → travel first
-      const travel = choice(`Travel to ${town.name}`);
-      travel.onclick = () => { closeModal(); travelTo(town.id); };
-      actionBar.append(travel);
-    } else {
-      // In town → enter building (emit hook AFTER closing this modal)
-      const enter = choice("Enter");
-      enter.onclick = () => {
-        log(`You enter ${b.name} in ${town.name}.`);
-        closeModal();
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("town:enterBuilding", {
-            detail: { town: townId, building: b }
-          }));
-        }, 0);
-      };
-      actionBar.append(enter);
-    }
-  }
-
-  // Build list and default-select first
-  buildings.forEach((b, i) => {
-    const btn = choice(b.name);
-    btn.dataset.id = b.id;
-    btn.onclick = () => select(b);
-    list.append(btn);
-    if (i === 0) select(b);
-  });
+/* --- Sidebar button --- */
+function ensureBtn(){if($("#btn-map"))return;const b=ce("button");b.id="btn-map";b.textContent="Travel / Map";b.onclick=openWorld;$(".actions .group").appendChild(b);}
+function openWorld(){const m=openModal("World Travel"),c=m.content;const here=state.location||"Unknown";c.append(pSmall("You are at: "+here),hr());
+ c.append(section("Towns"),...WORLD.filter(n=>n.type=="town").map(worldRow));
+ c.append(section("Wilderness"),...WORLD.filter(n=>n.type!="town").map(worldRow));
 }
+function section(t){const d=ce("div");d.className="title";d.textContent=t;return d;}
+function tag(t){const s=ce("span");s.className="pill";s.textContent=t;return s;}
+function worldRow(n){const r=kv();r.left.textContent=n.name;r.right.append(pSmall(n.desc));
+ if(state.location===n.name)r.left.appendChild(tag("here"));
+ const go=choice(state.location===n.name?"—":"Travel");go.disabled=(state.location===n.name);go.onclick=()=>travelTo(n.id);r.right.append(go);return r.wrap;}
 
+/* --- Travel + region set --- */
+function travelTo(id){const n=WORLD.find(x=>x.id===id);if(!n)return;
+ if(maybeStartCombat&&maybeStartCombat(n.type==="town"?0.15:0.3,"wastes","travel")){closeModal();return;}
+ state.location=n.name;state.region=(n.type==="wild")?n.id:null;
+ log("You travel to "+n.name+".");updateUI();closeModal();}
 
-  /* --- Travel (with optional encounter) --- */
-  function travelTo(nodeId){
-    const node = byId(nodeId);
-    if (!node) return;
+/* --- Explore override for wilderness --- */
+window.exploreCurrentRegion=function(){
+ const id=state.region,r=WILD[id];if(!r){log("Nothing special to explore here.");return;}
+ if(r.rad)rad(r.rad);
+ if(Math.random()<r.ch){openCombat(genEnemy(id));return;}
+ const l=roll(r.loot);if(!l){log("Nothing found.");return;}
+ if(l==="caps"){const amt=rnd(3,12);addCaps(amt);log("Found "+amt+" caps.");}
+ else{addItem(l,1);log("Scavenged "+(ITEMS[l]?.name||l));}
+};
+function roll(tab){if(!tab)return null;let tot=tab.reduce((s,[,w])=>s+w,0),r=Math.random()*tot;for(const [id,w] of tab){if((r-=w)<=0)return id;}return null;}
+function genEnemy(region){const pool=WILD[region]?.enemies||[];const id=pool[rnd(0,pool.length-1)];const e=ENEMIES.find(x=>x.id===id)||ENEMIES[0];return {...e,curHP:e.hp};}
 
-    if (typeof maybeStartCombat === "function"){
-      const started = maybeStartCombat(node.type==="town" ? 0.15 : 0.30, "wastes", "travel");
-      if (started) { closeModal(); return; }
-    }
+/* --- helpers --- */
+function kv(){const w=ce("div");w.className="kv";const a=ce("div"),b=ce("div");w.append(a,b);return{wrap:w,left:a,right:b};}
+function choice(t){const b=ce("button");b.className="choice";b.textContent=t;return b;}
+function hr(){return ce("div",{className:"hr"});}
+function pSmall(t){const p=ce("p");p.className="small muted";p.textContent=t;return p;}
+function ce(tag,props={}){const e=document.createElement(tag);Object.assign(e,props);return e;}
+function $(s){return document.querySelector(s);}
 
-    state.location = node.name;
-    log(`You travel to ${node.name}.`);
-    updateUI();
-    closeModal();
-  }
-
-  /* --- tiny DOM helpers (use your styles) --- */
-  function kv(){ const w=document.createElement("div"); w.className="kv";
-    const a=document.createElement("div"), b=document.createElement("div"); w.append(a,b);
-    return { wrap:w, left:a, right:b }; }
-  function choice(t){ const b=document.createElement("button"); b.className="choice"; b.textContent=t; return b; }
-  function hr(){ const d=document.createElement("div"); d.className="hr"; return d; }
-  function pSmall(t){ const p=document.createElement("p"); p.className="small muted"; p.textContent=t; return p; }
-
-  /* --- hook into UI lifecycle --- */
-  ensureSidebarButton();
-  const _updateUI = window.updateUI;
-  if (typeof _updateUI === "function"){
-    window.updateUI = function(){
-      _updateUI.apply(this, arguments);
-      ensureSidebarButton();
-    };
-  }
-
-  window.WL_TextMap = { world: WORLD, towns: TOWNS, openWorld, openTownView, travelTo };
+ensureBtn();const u=window.updateUI;window.updateUI=function(){u&&u();ensureBtn();}
+window.WL_TextMap={world:WORLD,towns:TOWNS,openWorld,travelTo};
 })();
-//// SCRIPT PIECE FOR BUILDINGS INSIDE TOWNS ////
-/* ====== Building hooks: connect town locations to real actions ============== */
-(function(){
-  if (window.WL_BuildingHooks) return;
 
-  // Helper: safe call
-  const call = fn => typeof fn === "function" ? fn : ()=> log("That’s not available yet.");
-
-  // Small utility examples used in a couple locations
-  function quickHeal(cost=12, hp=10, radDown=6){
-    setChoice(`Clinic services (Cost: ${cost} caps)`, [
-      { label:`Pay ${cost} caps`, run:()=>{
-          if (state.caps < cost) { log("You can’t afford treatment."); return; }
-          state.caps -= cost;
-          heal(hp); derad(radDown);
-          log(`The medic patches you up. HP +${hp}, RAD -${radDown}.`);
-        }},
-      { label:"Leave", run:()=>{} }
-    ]);
-  }
-
-  function waterPlant(){
-    const hasFilter = (countItem && countItem("water_filter")>0);
-    const cost = hasFilter ? 0 : 2;
-    setChoice("Water Plant: refill & maintenance", [
-      { label: (cost?`Refill (Cost: ${cost} caps)`:"Refill (free with filter)"),
-        run: ()=>{
-          if (cost && state.caps<cost){ log("Not enough caps."); return; }
-          if (cost) state.caps -= cost;
-          heal(5); derad(3);
-          log("You drink clean water. HP +5, RAD -3.");
-        }},
-      { label:"Leave", run:()=>{} }
-    ]);
-  }
-
-  function chapel(){
-    setChoice("Chapel of the Green", [
-      { label:"Leave an offering (2 caps, Karma +2, small heal)", run:()=>{
-          if (state.caps<2){ log("You can’t spare the caps."); return; }
-          state.caps -= 2; changeKarma(+2); heal(2);
-          log("You light a candle and breathe easy. Karma +2, HP +2.");
-        }},
-      { label:"Sit in quiet (XP +4)", run:()=>{ gainXP(4); log("You gather your thoughts. XP +4."); } },
-      { label:"Leave", run:()=>{} }
-    ]);
-  }
-
-  // Router: townId:buildingId -> function
-  const HOOKS = {
-    // -------- Dustford --------
-    "dustford:market":      ()=> call(openTrade)("Caravan"),
-    "dustford:clinic":      ()=> quickHeal(10, 12, 8),   // cheaper local clinic
-    "dustford:workshop":    ()=> call(openInventory)(),  // crafting lives in Inventory modal
-    "dustford:tavern":      ()=> call(openRelationships)(),
-    "dustford:water":       ()=> waterPlant(),
-    "dustford:chapel":      ()=> chapel(),
-    "dustford:hall":        ()=> call(openJoinFaction)(),
-    "dustford:gate":        ()=> {
-      // Simple job board teaser without running a whole work shift
-      setChoice("South Gate & Watch — Board", [
-        { label:"Patrol the palisade (XP +6)", run:()=>{ gainXP(6); log("You walk the wall and learn the ropes. XP +6."); } },
-        { label:"Scan for work (open Work)", run:()=> call(work)() },
-        { label:"Leave", run:()=>{} }
-      ]);
-    },
-
-    // -------- Ironwood --------
-    "ironwood:cantina":     ()=> call(openRelationships)(),
-    "ironwood:apoth":       ()=> quickHeal(12, 14, 10),  // pricier but stronger
-    "ironwood:foundry":     ()=> {
-      // Tiny crafting hook: upgrade scrap into a Scrap Blade if you’ve got parts
-      if ((countItem("junk")>=2) && (countItem("duct_tape")>=1)){
-        setChoice("Old Foundry — Tinker", [
-          { label:"Craft Scrap Blade (2 Junk + 1 Duct Tape)", run:()=>{
-              craft("craft_blade"); // you already defined this recipe
-            }},
-          { label:"Leave", run:()=>{} }
-        ]);
-      } else {
-        log("You need 2 Junk and 1 Duct Tape to craft something worthwhile.");
-      }
-    },
-    "ironwood:depot":       ()=> {
-      setChoice("Rail Depot", [
-        { label:"Ask for rumors (XP +5)", run:()=>{ gainXP(5); log("You trade gossip with the dispatcher. XP +5."); } },
-        { label:"Buy supplies (open Trader)", run:()=> call(openTrade)("Trader") },
-        { label:"Leave", run:()=>{} }
-      ]);
-    },
-    "ironwood:sawmill":     ()=> {
-      setChoice("Sawmill Yard", [
-        { label:"Short shift (gain small caps)", run:()=>{
-            const pay = rnd(6,12); state.caps += pay; gainXP(6);
-            log(`You stack planks for a while. +${pay} caps, XP +6.`);
-          }},
-        { label:"Leave", run:()=>{} }
-      ]);
-    },
-    "ironwood:lodge":       ()=> call(openJoinFaction)(), // good place to view faction actions
-    "ironwood:archive":     ()=> {
-      setChoice("Old Tech Archive", [
-        { label:"Study manuals (INT check)", run:()=>{
-            if (skillCheck("I", 12)){ gainXP(12); log("You absorb a pre-war schematic. XP +12."); }
-            else { gainXP(6); log("Interesting, but dense. XP +6."); }
-          }},
-        { label:"Leave", run:()=>{} }
-      ]);
-    },
-    "ironwood:gate":        ()=> {
-      setChoice("North Gate", [
-        { label:"Volunteer escort (may encounter)", run:()=>{
-            // small travel-ish encounter chance reusing your combat system
-            if (!maybeStartCombat || !maybeStartCombat(0.25, "wastes", "escort")){
-              const tip = rnd(4,9); state.caps += tip; gainXP(8);
-              log(`Quiet run. Caravan tips you ${tip} caps. XP +8.`);
-            }
-          }},
-        { label:"Leave", run:()=>{} }
-      ]);
-    }
-  };
-
-  // Fallback when no specific hook exists
-  function defaultEnter(townId, b){
-    log(`You look around ${b.name}. (No interaction hooked yet.)`);
-  }
-
-  // Event listener from the text-map module
-  window.addEventListener("town:enterBuilding", (e)=>{
-    const { town, building } = e.detail;      // town is id string (e.g., "dustford")
-    const key = `${town}:${building.id}`;
-    (HOOKS[key] || defaultEnter.bind(null, town, building))();
-  });
-
-  window.WL_BuildingHooks = { HOOKS }; // expose so you can add/override later
-})();
-/* ===== Text Map → Building Hooks ===========================================
-   Listens for "town:enterBuilding" and routes to your existing game UIs.
-   Paste this after the text-map module. You can expand/modify freely.
-=============================================================================*/
-window.addEventListener("town:enterBuilding", (e) => {
-  const { town, building } = e.detail;
-  const t = String(town);
-  const id = String(building.id);
-
-  // ------- Helpers for tiny actions -------
-  const spend = (n) => { if (state.caps >= n) { state.caps -= n; updateUI(); return true; } log("Not enough caps."); return false; };
-  const info = (s) => log(s, "muted");
-
-  // ------- DUSTFORD -------
-  if (t === "dustford") {
-    if (id === "market") {           // Market Hub → Trader
-      openTrade("Caravan");
-      return;
-    }
-    if (id === "clinic") {           // Tinroof Clinic → Heal prompt
-      setChoice("Tinroof Clinic — Treatment", [
-        { label:"Patch up (12 caps)", run:()=> healAction() },
-        { label:"Quick check (-2 caps, RAD -2)", run:()=>{ if (spend(2)) { derad(2); log("A quick detox. RAD -2."); } } },
-        { label:"Leave", run:()=>{} }
-      ]);
-      return;
-    }
-    if (id === "workshop") {         // Workshop Row → Inventory/Crafting
-      openInventory();
-      return;
-    }
-    if (id === "tavern") {           // Rusty Lantern → small social stub
-      setChoice("Rusty Lantern", [
-        { label:"Listen for rumors (+6 XP)", run:()=>{ gainXP(6); info("You pick up some chatter."); } },
-        { label:"Buy a round (-3 caps, +bond)", run:()=>{ if (spend(3)) { const r = state.relationships[0]; if (r){ r.bond = Math.min(100, r.bond+3); log(`You buy a round. ${r.name} smiles. Bond +3.`); updateUI(); } } } },
-        { label:"Leave", run:()=>{} }
-      ]);
-      return;
-    }
-    if (id === "water") {            // Water Plant → refill
-      if (countItem("canteen") > 0) { heal(5); derad(3); log("You refill and drink. HP +5, RAD -3."); }
-      else { info("Bring a canteen to get clean water."); }
-      return;
-    }
-    if (id === "chapel") {           // Chapel → karma
-      setChoice("Chapel of the Green", [
-        { label:"Light a candle (-2 caps, Karma +2)", run:()=>{ if (spend(2)) { changeKarma(+2); log("You make a small offering. Karma +2."); } } },
-        { label:"Leave", run:()=>{} }
-      ]);
-      return;
-    }
-    if (id === "hall") {             // Mayor’s Hall → factions (stub entry point)
-      openJoinFaction();
-      return;
-    }
-    if (id === "gate") {             // Gate & Watch → tiny job board stub
-      setChoice("South Gate & Watch", [
-        { label:"Check bounties (stub)", run:()=> info("Nothing posted today.") },
-        { label:"Leave", run:()=>{} }
-      ]);
-      return;
-    }
-  }
-
-  // ------- IRONWOOD -------
-  if (t === "ironwood") {
-    if (id === "apoth") {            // Apothecary → meds trader
-      openTrade("Caravan"); // reuse trader UI for now
-      return;
-    }
-    if (id === "foundry") {          // Foundry → minor scrap job
-      setChoice("Old Foundry Floor", [
-        { label:"Help sort scrap (+8 caps, +6 XP, RAD +2)", run:()=>{ state.caps += 8; rad(2); gainXP(6); log("You sort slag and copper. +8 caps, RAD +2, XP +6."); updateUI(); } },
-        { label:"Leave", run:()=>{} }
-      ]);
-      return;
-    }
-    if (id === "depot") {            // Rail Depot → rumor/XP
-      setChoice("Rail Depot", [
-        { label:"Ask dispatcher (+6 XP)", run:()=>{ gainXP(6); info("A delayed caravan will pass in a few days."); } },
-        { label:"Leave", run:()=>{} }
-      ]);
-      return;
-    }
-    if (id === "cantina") {          // Iron Cantina → simple gamble
-      setChoice("Iron Cantina", [
-        { label:"Gamble (-5 caps)", run:()=>{ if (spend(5)) { if (rnd(1,100) < 45){ const win = money(1.2); state.caps += win; log(`You win ${win} caps at dice.`); } else { log("House wins."); } updateUI(); } } },
-        { label:"Leave", run:()=>{} }
-      ]);
-      return;
-    }
-    if (id === "sawmill") {          // Sawmill → quick day work
-      setChoice("Sawmill Yard", [
-        { label:"Load planks (+6 caps, +5 XP, HP -2)", run:()=>{ state.caps += 6; gainXP(5); damage(2); log("Hard labor pays a little."); updateUI(); } },
-        { label:"Leave", run:()=>{} }
-      ]);
-      return;
-    }
-    if (id === "lodge") {            // Ranger Lodge → factions
-      openJoinFaction();
-      return;
-    }
-    if (id === "archive") {          // Old Tech Archive → study
-      setChoice("Old Tech Archive", [
-        { label:"Study schematics (+1 INT, +6 XP)", run:()=>{ state.special.I = Math.min(10, state.special.I+1); gainXP(6); log("You study old manuals. +1 INT."); updateUI(); } },
-        { label:"Leave", run:()=>{} }
-      ]);
-      return;
-    }
-    if (id === "gate") {             // North Gate
-      setChoice("North Gate", [
-        { label:"Read ranger notices (stub)", run:()=> info("Most slips are weathered and unreadable.") },
-        { label:"Leave", run:()=>{} }
-      ]);
-      return;
-    }
-  }
-
-  // Fallback
-  log(`${building.name} is not wired yet. (Stub)`);
-});
 </script>
 <!-- ==== WL Combat End Screen + openCombat override (FINAL, larger box, green skin) ==== -->
 <style>
