@@ -5,139 +5,149 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Wastelife: A Post-Apocalyptic Life Sim</title>
 <style>
-  :root {
-    --bg:#101710;
-    --panel:#0e1a0e;
-    --accent:#3af53a;
-    --accent-dim:#1ea31e;
-    --danger:#ff6b6b;
-    --warn:#ffd166;
-    --ok:#06d6a0;
-    --text:#d7ffd7;
-    --muted:#9bd39b;
-    --shadow:0 10px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(58,245,58,.15);
-    --radius:14px;
-    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-    --sans:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-  }
+:root {
+  /* Dusty Texas palette */
+  --bg:#1a1512;          /* mesquite night */
+  --panel:#1f1a16;       /* oiled leather */
+  --accent:#e38f2b;      /* mesquite ember */
+  --accent-dim:#995c1a;  /* aged brass */
+  --danger:#c6453a;      /* rust red */
+  --warn:#f2c14e;        /* sun-glare amber */
+  --ok:#79b37b;          /* scrub green */
+  --text:#f3e9d2;        /* parchment */
+  --muted:#c9b8a6;       /* dusty khaki */
+  --shadow:0 10px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(227,143,43,.14);
+  --radius:14px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
 
-  /* let page grow, always fill background */
-  html,body{min-height:100%}
+/* let page grow, always fill background */
+html,body{min-height:100%}
 
-  body {
-    margin:0;
-    background:
-      radial-gradient(1200px 800px at 30% -10%, #143d14 0%, var(--bg) 50%) no-repeat,
-      var(--bg);
-    background-attachment:fixed;
-    background-color:var(--bg);
-    font-family:var(--sans);
-    color:var(--text);
-    line-height:1.4;
-  }
+body {
+  margin:0;
+  background:
+    radial-gradient(1200px 800px at 30% -10%, #3b2b21 0%, var(--bg) 52%) no-repeat,
+    radial-gradient(900px 700px at 110% 120%, #2a211b 0%, transparent 60%) no-repeat,
+    linear-gradient(180deg, #1b1714, #16120f);
+  background-attachment:fixed;
+  background-color:var(--bg);
+  font-family:var(--sans);
+  color:var(--text);
+  line-height:1.4;
+}
 
-  .wrap{max-width:1200px;margin:32px auto;padding:0 16px;}
-  header{display:grid;gap:12px;grid-template-columns:1fr;margin-bottom:16px;}
-  .topbar{display:grid;gap:12px;grid-template-columns:1.1fr 1fr;}
-  @media(max-width:1000px){.topbar{grid-template-columns:1fr}}
+/* ======== ORIGINAL LAYOUT (unchanged) ======== */
+.wrap{max-width:1200px;margin:32px auto;padding:0 16px;}
+header{display:grid;gap:12px;grid-template-columns:1fr;margin-bottom:16px;}
+.topbar{display:grid;gap:12px;grid-template-columns:1.1fr 1fr;}
+@media(max-width:1000px){.topbar{grid-template-columns:1fr}}
+.grid{display:grid;gap:12px;grid-template-columns:330px 1fr;}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
-  .card{background:linear-gradient(180deg,rgba(58,245,58,.05),rgba(0,0,0,.0));
-    border:1px solid rgba(58,245,58,.25);box-shadow:var(--shadow);
-    border-radius:var(--radius);padding:14px;}
-  .title{font-family:var(--mono);color:var(--accent);letter-spacing:.5px;
-    display:flex;align-items:center;gap:10px;font-size:18px;margin:0 0 6px;}
+/* ======== Theming only (colors), layout preserved ======== */
+.card{
+  background:linear-gradient(180deg, rgba(227,143,43,.06), rgba(0,0,0,.08));
+  border:1px solid rgba(227,143,43,.28);
+  box-shadow:var(--shadow);
+  border-radius:var(--radius);
+  padding:14px;
+}
+.title{
+  font-family:var(--mono);
+  color:var(--accent);
+  letter-spacing:.5px;
+  display:flex;align-items:center;gap:10px;
+  font-size:18px;margin:0 0 6px;
+  text-shadow:0 1px 0 rgba(0,0,0,.35);
+}
+.pill{
+  border:1px solid rgba(227,143,43,.35);
+  padding:6px 10px;border-radius:999px;
+  font-family:var(--mono);
+  background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
+}
+.stat{margin:8px 0}
+.stat-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:var(--mono)}
+.bar{height:12px;border-radius:8px;background:rgba(227,143,43,.12);overflow:hidden;border:1px solid rgba(227,143,43,.32)}
+.bar>i{display:block;height:100%;background:var(--accent);box-shadow:inset 0 0 12px rgba(0,0,0,.4)}
+.bar.warn>i{background:var(--warn)}
+.bar.danger>i{background:var(--danger)}
 
-  .grid{display:grid;gap:12px;grid-template-columns:330px 1fr;}
-  @media(max-width:1000px){.grid{grid-template-columns:1fr}}
-  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.actions{display:grid;gap:8px}
+.actions button{
+  all:unset;cursor:pointer;padding:10px 12px;border-radius:10px;
+  border:1px solid rgba(227,143,43,.35);
+  background:linear-gradient(180deg, rgba(227,143,43,.10), rgba(0,0,0,.25));
+  font-family:var(--mono);color:var(--text)
+}
+.actions button:hover{border-color:var(--accent)}
+.actions .group{display:grid;gap:8px}
 
-  .pill{border:1px solid rgba(58,245,58,.4);padding:6px 10px;
-    border-radius:999px;font-family:var(--mono);background:rgba(0,0,0,.2)}
+.log{height:540px;overflow:auto;padding-right:6px}
+.entry{
+  padding:10px 12px;border-left:3px solid rgba(227,143,43,.35);
+  background:rgba(0,0,0,.22);border-radius:10px;margin:8px 0
+}
+.entry p{margin:0}
+.choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.choice{all:unset;cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid rgba(227,143,43,.35);font-family:var(--mono)}
+.choice:hover{border-color:var(--accent)}
 
-  .stat{margin:8px 0}
-  .stat-label{display:flex;justify-content:space-between;font-size:12px;
-    color:var(--muted);font-family:var(--mono)}
-  .bar{height:12px;border-radius:8px;background:rgba(58,245,58,.15);
-    overflow:hidden;border:1px solid rgba(58,245,58,.3)}
-  .bar>i{display:block;height:100%;background:var(--accent);
-    box-shadow:inset 0 0 12px rgba(0,0,0,.4)}
-  .bar.warn>i{background:var(--warn)}
-  .bar.danger>i{background:var(--danger)}
+.muted{color:var(--muted)}
+.hr{height:1px;background:rgba(227,143,43,.28);margin:10px 0}
+footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.linklike{all:unset;cursor:pointer;color:var(--accent);font-family:var(--mono)}
+.dangerous{color:var(--danger)}
+.center{text-align:center}
 
-  .actions{display:grid;gap:8px}
-  .actions button{all:unset;cursor:pointer;padding:10px 12px;border-radius:10px;
-    border:1px solid rgba(58,245,58,.35);
-    background:linear-gradient(180deg,rgba(58,245,58,.08),rgba(0,0,0,.2));
-    font-family:var(--mono);color:var(--text)}
-  .actions button:hover{border-color:var(--accent)}
-  .actions .group{display:grid;gap:8px}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:10;}
+.modal{width:min(880px,92vw);max-height:80vh;overflow:auto}
+.modal .title{
+  position:sticky;top:0;
+  background:linear-gradient(180deg, rgba(26,21,18,1), rgba(26,21,18,.86));
+  padding:14px;border-bottom:1px solid rgba(227,143,43,.28);z-index:1
+}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:8px;margin:10px 0;font-family:var(--mono)}
+.small{font-size:12px}
+.hidden{display:none!important}
 
-  .log{height:540px;overflow:auto;padding-right:6px}
-  .entry{padding:10px 12px;border-left:3px solid rgba(58,245,58,.35);
-    background:rgba(0,0,0,.2);border-radius:10px;margin:8px 0}
-  .entry p{margin:0}
-  .choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-  .choice{all:unset;cursor:pointer;padding:8px 10px;border-radius:8px;
-    border:1px solid rgba(58,245,58,.35);font-family:var(--mono)}
-  .choice:hover{border-color:var(--accent)}
+/* faction pill theming (slugged) */
+#faction-pill-wrapper{cursor:pointer;transition:background .2s,color .2s;}
+.faction-settlers{background:#efe6d4;color:#4b3a20;}          /* adobe tan */
+.faction-rangers{background:#d9e8e0;color:#204535;}           /* ranger green */
+.faction-scribes{background:#e8e1f2;color:#352a55;}           /* archivist violet */
+.faction-dust_marauders{background:#f0e0cc;color:#5a2b14;}    /* dusty leather */
+.faction-none{background:#ddd;color:#333;}
 
-  .muted{color:var(--muted)}
-  .hr{height:1px;background:rgba(58,245,58,.25);margin:10px 0}
-  footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  .linklike{all:unset;cursor:pointer;color:var(--accent);font-family:var(--mono)}
-  .dangerous{color:var(--danger)}
-  .center{text-align:center}
-
-  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);
-    display:none;place-items:center;z-index:10;}
-  .modal{width:min(880px,92vw);max-height:80vh;overflow:auto}
-  .modal .title{position:sticky;top:0;
-    background:linear-gradient(180deg,rgba(16,23,16,1),rgba(16,23,16,.85));
-    padding:14px;border-bottom:1px solid rgba(58,245,58,.25);z-index:1}
-  .kv{display:grid;grid-template-columns:160px 1fr;gap:8px;margin:10px 0;
-    font-family:var(--mono)}
-  .small{font-size:12px}
-  .hidden{display:none!important}
-
-  /* faction pill theming */
-  #faction-pill-wrapper{cursor:pointer;transition:background .2s,color .2s;}
-  .faction-settlers{background:#d9f2d9;color:#225522;}
-  .faction-rangers{background:#d9eaf2;color:#1d3d55;}
-  .faction-scribes{background:#f2e9d9;color:#553d1d;}
-  .faction-Dust Marauders{background:#f2d9d9;color:#551d1d;}
-  .faction-none{background:#eee;color:#444;}
-
-/* ── Faction Menu Enhancements ─────────────────────────────── */
+/* ── Faction Menu Enhancements (colors only) ───────────────── */
 .faction-header {
   padding: 14px;
   border-radius: var(--radius);
   margin-bottom: 12px;
   background: rgba(0,0,0,.3);
-  border: 1px solid rgba(58,245,58,.35);
+  border: 1px solid rgba(227,143,43,.35);
 }
-
-.faction-header.settlers { border-color:#3af53a; }
-.faction-header.rangers  { border-color:#1da1f2; }
-.faction-header.scribes  { border-color:#f2b84b; }
-.faction-header.Dust Marauders  { border-color:#ff4d4d; }
+.faction-header.settlers       { border-color:#c48b40; }
+.faction-header.rangers        { border-color:#3a8f6b; }
+.faction-header.scribes        { border-color:#8a78c4; }
+.faction-header.dust_marauders { border-color:#e38f2b; } /* fixed slug */
 
 .rep-bar {
   height: 12px;
   border-radius: 8px;
-  background: rgba(58,245,58,.15);
-  border: 1px solid rgba(58,245,58,.3);
+  background: rgba(227,143,43,.12);
+  border: 1px solid rgba(227,143,43,.32);
   overflow: hidden;
   margin: 4px 0;
 }
-.rep-bar > i {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-}
+.rep-bar > i { display:block; height:100%; background:var(--accent); }
 
 .faction-action {
   background: rgba(0,0,0,.2);
-  border: 1px solid rgba(58,245,58,.25);
+  border: 1px solid rgba(227,143,43,.28);
   border-radius: var(--radius);
   padding: 10px;
   margin: 8px 0;
@@ -148,12 +158,8 @@
   margin-bottom: 6px;
 }
 
-
 /* Solid background for modals only */
-.modal.card {
-  background: var(--panel); /* solid dark panel */
-} 
-
+.modal.card { background: var(--panel); }
 </style>
 </head>
 <body>
