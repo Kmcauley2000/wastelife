@@ -3704,5 +3704,188 @@ function section(titleText){
   W.LW = { state:S, openSocial, openNPC, talk, travelToId };
 })();
 </script>
+
+<!-- ============== Hard-wired Faction NPCs + Faction chips + Modal faction line ============== -->
+<script>
+(function(){
+  if (window.__FACTION_NPCS_BLOCK__) return; window.__FACTION_NPCS_BLOCK__ = true;
+
+  const W = window;
+  const S  = W.state  || (W.state = {});
+  const LW = W.LW     || (W.LW    = { state:{ npcs:[] } });
+  LW.state = LW.state || { npcs:[] };
+
+  // ---- helpers
+  const factionName = (fid)=>{
+    const list = (W.FACTIONS || []);
+    const f = list.find(x=>x.id===fid);
+    return f ? f.name : (fid==="none" ? "Independent" : (fid||"Unknown"));
+  };
+
+  // ---- 1) Canonical roster (edit freely)
+  const ROSTER = [
+    { id:"pike",  name:"Trader Pike", role:"Quartermaster", factionId:"settlers",       start:"dustown",
+      bio:"Caravan fixer with a ledger for every handshake." },
+    { id:"mae",   name:"Doc Mae",     role:"Field Medic",   factionId:"scribes",        start:"ironwood",
+      bio:"Gentle voice, steady hands, and a belt of tonics." },
+    { id:"colt",  name:"Ranger Colt", role:"Scout Lt.",     factionId:"rangers",        start:"ironwood",
+      bio:"Edges sharp as his eyes; smells like dust and gun oil." },
+    { id:"sal",   name:"Shady Sal",   role:"Fence",         factionId:"dust_marauders", start:"canyon",
+      bio:"A smile like a cracked bottle. ‘No questions’ policy." },
+    { id:"ishi",  name:"Tinker Ishi", role:"Scrapwright",   factionId:"none",           start:"dustown",
+      bio:"Wires braided like hair; pockets full of miracles." },
+    { id:"lark",  name:"Old Man Lark",role:"Wanderer",      factionId:"none",           start:"dunes",
+      bio:"Stories older than the dust. Sometimes true." },
+  ];
+
+  // ---- 2) Seed them into LW.state.npcs (once per save, but also top-up missing ones)
+  function ensureNPCSeed(n){
+    LW.state.npcs = LW.state.npcs || [];
+    let npc = LW.state.npcs.find(x=>x.id===n.id);
+    if (!npc){
+      npc = {
+        id:n.id, name:n.name, role:n.role, bio:n.bio || "",
+        factionId:n.factionId || "none",
+        locId:n.start || "ironwood",
+        trust:45, alive:true
+      };
+      LW.state.npcs.push(npc);
+    } else {
+      npc.alive = (npc.alive !== false);
+      npc.factionId = npc.factionId || (n.factionId||"none");
+      npc.locId = npc.locId || n.start || "ironwood";
+      npc.role = npc.role || n.role;
+      npc.name = npc.name || n.name;
+      if (n.bio && !npc.bio) npc.bio = n.bio;
+    }
+  }
+
+  function seedAllIfNeeded(){
+    if (!S.__seededFactionRoster__){
+      ROSTER.forEach(ensureNPCSeed);
+      S.__seededFactionRoster__ = true;
+      (W.log||console.log)("Faction NPCs seeded into world.");
+    } else {
+      // top up in case roster grew between versions
+      ROSTER.forEach(ensureNPCSeed);
+    }
+  }
+
+  seedAllIfNeeded();
+
+  // ---- 3) Augment the Factions screen with “contacts by faction” chips
+  function renderFactionChips(){
+    let mount = document.getElementById("faction-npc-chips");
+    if (!mount){
+      const parent =
+        document.querySelector("#factions, .factions, [data-factions], section.factions, .card.factions")
+        || document.querySelector(".card:has(.title):has(.-factions)")
+        || document.body;
+      mount = document.createElement("section");
+      mount.id = "faction-npc-chips";
+      mount.className = "card";
+      mount.innerHTML = `
+        <div class="title">Faction Contacts</div>
+        <p class="small muted">Known NPCs grouped by faction. Click to talk.</p>
+        <div id="faction-npc-chips-body"></div>
+      `;
+      parent.appendChild(mount);
+    }
+
+    const byFaction = {};
+    (LW.state.npcs||[]).filter(n=>n.alive!==false).forEach(n=>{
+      const f = n.factionId || "none";
+      (byFaction[f] = byFaction[f] || []).push(n);
+    });
+
+    if (!document.getElementById("faction-chip-style")){
+      const st = document.createElement("style");
+      st.id = "faction-chip-style";
+      st.textContent = `
+        #faction-npc-chips .chiprow{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 16px; }
+        #faction-npc-chips .chip { display:inline-flex; align-items:center; gap:6px;
+          padding:4px 10px; border:1px solid rgba(255,255,255,0.08);
+          border-radius:999px; cursor:pointer; font-size:.9em;
+          background:rgba(255,255,255,0.03); }
+        #faction-npc-chips .chip .role{ opacity:.65; font-size:.85em }
+      `;
+      document.head.appendChild(st);
+    }
+
+    const myFaction = (S.faction||"none");
+    const keys = Object.keys(byFaction).sort((a,b)=>{
+      if (a===myFaction && b!==myFaction) return -1;
+      if (b===myFaction && a!==myFaction) return 1;
+      return a.localeCompare(b);
+    });
+
+    const body = document.getElementById("faction-npc-chips-body");
+    if (!body) return;
+    body.innerHTML = keys.map(fid=>{
+      const list = byFaction[fid];
+      const chips = list.map(n=>`
+        <span class="chip" title="${factionName(n.factionId)}"
+              onclick="(window.LW && LW.openNPC) ? LW.openNPC('${n.id}') : null">
+          <b>${n.name}</b><span class="role">· ${n.role||"NPC"}</span>
+        </span>
+      `).join("");
+      return `
+        <div class="kv">
+          <div>${factionName(fid)}</div>
+          <div class="chiprow">${chips || '<span class="small muted">No known contacts</span>'}</div>
+        </div>
+        <div class="hr"></div>
+      `;
+    }).join("") || `<p class="muted">No contacts yet.</p>`;
+  }
+
+  // ---- 4) Patch your NPC modal so it shows the faction explicitly
+  // We wrap LW.openNPC, call the original, then inject a “Faction” line into the modal.
+  const _openNPC = LW.openNPC;
+  LW.openNPC = function(id){
+    if (typeof _openNPC === "function") _openNPC(id);
+    try {
+      // Find the npc in state and render the line
+      const npc = (LW.state.npcs||[]).find(n=>n.id===id) || { factionId:"none" };
+      const fName = factionName(npc.factionId);
+
+      // Try to locate your modal content area
+      const modal = document.querySelector("#modal-content, .modal-content, #npc-modal .content") || document.body;
+      if (!modal) return;
+
+      // Avoid dupes
+      const existing = document.getElementById("npc-faction-line");
+      if (existing) existing.remove();
+
+      // If there’s a kv grid already, add a row. Otherwise add a small block.
+      const kv = modal.querySelector(".kv");
+      if (kv){
+        const label = document.createElement("div"); label.textContent = "Faction";
+        const value = document.createElement("div"); value.innerHTML = `<b>${fName}</b>`;
+        const marker = document.createElement("div"); marker.id = "npc-faction-line"; marker.style.display="contents";
+        marker.appendChild(label); marker.appendChild(value);
+        kv.appendChild(marker);
+      } else {
+        const block = document.createElement("div");
+        block.id = "npc-faction-line";
+        block.className = "small";
+        block.style.margin = "8px 0";
+        block.innerHTML = `<span class="muted">Faction:</span> <b>${fName}</b>`;
+        modal.prepend(block);
+      }
+    } catch(e){}
+  };
+
+  // ---- 5) Keep everything synced whenever your UI refreshes
+  const _updateUI = W.updateUI;
+  W.updateUI = function(){
+    _updateUI && _updateUI();
+    try { seedAllIfNeeded(); renderFactionChips(); } catch(e){}
+  };
+
+  // First paint (covers initial load)
+  try { renderFactionChips(); } catch(e){}
+})();
+</script>
 </body>
 </html>
