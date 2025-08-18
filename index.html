@@ -212,8 +212,7 @@ footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
           <button id="btn-heal">Treat Wounds / AntiRad (Cost: 12 Caps)</button>
         </div>
         <div class="hr"></div>
-        <div class="group">
-		<button id="btn-relationships">Relationships</button>
+        <div class="group">		
 		<button id="btn-inventory">Inventory</button>
 		<button id="btn-trade">Visit Trader</button>
 		<button id="btn-join-faction">Join a Faction</button>
@@ -959,7 +958,6 @@ function newRun() {
     job: "none",
     faction: "none",
     inventory: ["Canteen","Junk","Duct Tape","Knife",],
-    relationships: seedRelationships(),
     perks: [],
     pendingChoice: null,
     log: [],
@@ -976,18 +974,6 @@ function newRun() {
   updateUI();
 }
 
-function seedRelationships() {
-  const rel = [];
-  for (let i=0;i<3;i++){
-    rel.push({
-      id: crypto.randomUUID(),
-      name: sample(NAMES)+" "+sample(["Smith","Vale","Turner","Lee","Morales","Nguyen","Khan","Parker"]),
-      bond: rnd(30,70),
-      romance:false
-    });
-  }
-  return rel;
-}
 
 
 /* ========= UI ========= */
@@ -1051,8 +1037,7 @@ function updateUI() {
 
   // disable actions if pending choice or dead
   const disable = !!state.pendingChoice || !state.alive;
-  ["#btn-age","#btn-explore","#btn-work","#btn-heal",
-   "#btn-relationships","#btn-inventory","#btn-join-faction","#btn-perks"]
+  ["#btn-age","#btn-explore","#btn-work","#btn-heal", "#btn-inventory","#btn-join-faction","#btn-perks"]
     .forEach(sel => { $(sel).disabled = disable; $(sel).style.opacity = disable? .6 : 1; });
 
   // death checks
@@ -1747,183 +1732,7 @@ function ageUp(){
   tickBuffs("action");
 }
 
-function openRelationships(){
-  // --- UI state (persist across opens) ---
-  if (state._relSort == null) state._relSort = "bond";     // "bond" | "name"
-  if (state._relFilter == null) state._relFilter = "all";   // "all" | "partners"
 
-  // Backfill old saves: ensure fields exist
-  state.relationships.forEach(r=>{
-    if (typeof r.bond !== "number") r.bond = rnd(30,70);
-    if (typeof r.romance !== "boolean") r.romance = false;
-    if (!r.id) r.id = crypto.randomUUID();
-    if (!r.name) r.name = "Wastelander " + rnd(100,999);
-    // per-year favor cooldown (optional)
-    if (typeof r.lastFavorYear !== "number") r.lastFavorYear = 0;
-  });
-
-  const m = openModal("Relationships");
-
-  // Header stats
-  const avg = Math.round(
-    (state.relationships.reduce((a,r)=>a+r.bond,0) / Math.max(1, state.relationships.length))
-  );
-  const head = el("div","kv");
-  head.append(el("div", null, "Overview"));
-  head.append(el("div", "small muted", `People: ${state.relationships.length} • Avg bond: ${isFinite(avg)?avg:0}`));
-  m.content.append(head, el("div","hr"));
-
-  // Controls (sort + filter)
-  const ctrl = el("div","kv");
-  ctrl.append(el("div", null, "Sort / Filter"));
-
-  const ctrlBox = el("div");
-  const sortBond = el("button","choice", state._relSort==="bond" ? "Sort: Bond ✓" : "Sort: Bond");
-  const sortName = el("button","choice", state._relSort==="name" ? "Sort: Name ✓" : "Sort: Name");
-  const filterAll = el("button","choice", state._relFilter==="all" ? "Show: All ✓" : "Show: All");
-  const filterPartners = el("button","choice", state._relFilter==="partners" ? "Show: Partners ✓" : "Show: Partners");
-
-  sortBond.onclick = ()=>{ state._relSort="bond"; openRelationships(); };
-  sortName.onclick = ()=>{ state._relSort="name"; openRelationships(); };
-  filterAll.onclick = ()=>{ state._relFilter="all"; openRelationships(); };
-  filterPartners.onclick = ()=>{ state._relFilter="partners"; openRelationships(); };
-
-  ctrlBox.append(sortBond, sortName, filterAll, filterPartners);
-  ctrl.append(ctrlBox);
-  m.content.append(ctrl, el("div","hr"));
-
-  // Apply sort + filter
-  let rows = [...state.relationships];
-  if (state._relFilter === "partners") rows = rows.filter(r=>r.romance);
-  if (state._relSort === "name") rows.sort((a,b)=>a.name.localeCompare(b.name));
-  else rows.sort((a,b)=>b.bond - a.bond);
-
-  if (!rows.length){
-    m.content.append(el("p","muted","(no matches)"));
-    return;
-  }
-
-  // Helper: bond bar element
-  const bondBar = (val)=>{
-    const outer = el("div","bar" + (val<=30?" danger": val<=60?" warn":""));
-    const fill = el("i"); fill.style.width = clamp(val,0,100) + "%";
-    outer.append(fill);
-    return outer;
-  };
-
-  // Per-person rows
-  rows.forEach(r=>{
-    const row = el("div","kv");
-    row.append(el("div", null, r.name + (r.romance ? " ♥" : "")));
-
-    const actions = el("div");
-
-    // Bond label + bar
-    const bondWrap = el("div");
-    bondWrap.append(el("div","small muted", `bond ${r.bond}`));
-    bondWrap.append(bondBar(r.bond));
-    actions.append(bondWrap);
-
-    // Talk
-    const talk = el("button","choice"); 
-    talk.textContent = "Talk (+bond)";
-    talk.onclick = () => { 
-      const d = rnd(2,8) + (state.special.C>=6 ? 2 : 0);
-      r.bond = clamp(r.bond + d, 0, 100); 
-      log(`You talk with ${r.name}. Bond +${d}.`); 
-      updateUI(); 
-      openRelationships(); 
-    };
-    actions.append(talk);
-
-    // Gift
-    const gift = el("button","choice"); 
-    gift.textContent = "Gift (-6 caps, ++bond)";
-    gift.onclick = () => { 
-      if (state.caps >= 6){ 
-        state.caps -= 6; 
-        const d = rnd(6,16); 
-        r.bond = clamp(r.bond + d, 0, 100); 
-        log(`Gift for ${r.name}. Bond +${d}.`); 
-        updateUI(); 
-        openRelationships(); 
-      } else { 
-        log("Not enough caps for a gift."); 
-      } 
-    };
-    actions.append(gift);
-
-    // Hang Out (no caps cost, modest bond & tiny heal/xp)
-    const hang = el("button","choice");
-    hang.textContent = "Hang out (+bond, +tiny heal)";
-    hang.onclick = () => {
-      const d = rnd(3,9);
-      r.bond = clamp(r.bond + d, 0, 100);
-      heal(2);
-      gainXP(4);
-      log(`You spend time with ${r.name}. Bond +${d}. You feel a bit better (+HP).`);
-      updateUI();
-      openRelationships();
-    };
-    actions.append(hang);
-
-    // Flirt / Commit
-    const romance = el("button","choice"); 
-    romance.textContent = r.romance ? "Stay committed" : "Flirt / Commit";
-    romance.onclick = () => { 
-      if (state.age < 16){ log("Too young for romance."); return; }
-      if (r.romance){
-        log(`You reaffirm things with ${r.name}.`);
-        r.bond = clamp(r.bond + 2, 0, 100);
-      } else {
-        // CHA-leaning check
-        const ok = skillCheck("C", 11);
-        if (r.bond >= 55 && ok){
-          r.romance = true; 
-          r.bond = clamp(r.bond + 8, 0, 100);
-          log(`You and ${r.name} become partners!`);
-        } else {
-          r.bond = clamp(r.bond - 3, 0, 100);
-          log(`${r.name} hesitates. Maybe build more trust. (Bond -3)`);
-        }
-      }
-      updateUI(); 
-      openRelationships(); 
-    };
-    actions.append(romance);
-
-    // Ask a Favor (once per year each person) – small, situational perks
-    const canFavor = r.bond >= 60 && r.lastFavorYear !== state.year;
-    const favor = el("button","choice", canFavor ? "Ask a favor" : "Favor (unavailable)");
-    favor.disabled = !canFavor;
-    favor.onclick = () => {
-      r.lastFavorYear = state.year;
-      // quick randomized favors
-      const t = rnd(1,4);
-      if (t===1){ const c = rnd(6,14); state.caps += c; log(`${r.name} lends a hand with barter. +${c} caps.`); }
-      else if (t===2){ heal(6); log(`${r.name} patches you up. HP +6.`); }
-      else if (t===3){ addItem("junk",1); log(`${r.name} shares some scrap. +1 Junk.`); }
-      else { gainXP(8); log(`${r.name} trains with you. XP +8.`); }
-      updateUI(); openRelationships();
-    };
-    actions.append(favor);
-
-    // Break up (if partnered)
-    if (r.romance){
-      const breakBtn = el("button","choice");
-      breakBtn.textContent = "Break up";
-      breakBtn.onclick = () => {
-        r.romance = false;
-        r.bond = clamp(r.bond - rnd(8,15), 0, 100);
-        log(`You and ${r.name} part ways.`);
-        updateUI(); openRelationships();
-      };
-      actions.append(breakBtn);
-    }
-
-    m.content.append(row, actions, el("div","hr"));
-  });
-}
 
 function work(){
   if (!state.alive) return;
@@ -3163,7 +2972,6 @@ $("#btn-explore").onclick = ()=>{ if (!state.pendingChoice) explore(); updateUI(
 $("#btn-work").onclick = ()=>{ if (!state.pendingChoice) work(); updateUI(); };
 $("#btn-heal").onclick = ()=>{ if (!state.pendingChoice) healAction(); updateUI(); };
 $("#btn-trade").onclick = ()=> openTrade("Caravan");
-$("#btn-relationships").onclick = ()=> openRelationships();
 $("#btn-inventory").onclick = ()=> openInventory();
 $("#btn-join-faction").onclick = ()=> openJoinFaction();
 $("#btn-perks").onclick = ()=> openPerks();
@@ -3185,7 +2993,6 @@ window.addEventListener("DOMContentLoaded", () => {
   $("#btn-heal").onclick = healAction;
 
   // Menus / modals
-  $("#btn-relationships").onclick = openRelationships;
   $("#btn-inventory").onclick = openInventory;
   $("#btn-trade").onclick = () => openTrade("Trader");
   $("#btn-join-faction").onclick = openJoinFaction;
@@ -3266,9 +3073,9 @@ function $(s){return document.querySelector(s);}
 
 ensureBtn();const u=window.updateUI;window.updateUI=function(){u&&u();ensureBtn();}
 window.WL_TextMap={world:WORLD,towns:TOWNS,openWorld,travelTo};
+// in travelTo(id) after state.location = n.name; ...
 })();
 
-</script>
 <!-- ==== WL Combat End Screen + openCombat override (FINAL, larger box, green skin) ==== -->
 <style>
   :root{--wl-bg:rgba(0,0,0,.65);--wl-b:rgba(120,255,120,.18);--wl-b2:rgba(120,255,120,.12);--wl-t:#c6ffd0;--wl-m:#8fb090}
@@ -3341,7 +3148,7 @@ window.WL_TextMap={world:WORLD,towns:TOWNS,openWorld,travelTo};
   </div>
 </div>
 
-<script>
+
 /* ---- end-screen helper ---- */
 (function(){
   const $=id=>document.getElementById(id);
@@ -3535,6 +3342,7 @@ window.WL_TextMap={world:WORLD,towns:TOWNS,openWorld,travelTo};
   /* ensure node is under <body> even if something moved it */
   (function(){ const n=document.getElementById('wl-combat-end'); if(n && n.parentNode!==document.body){ document.body.appendChild(n); }})();
 })();
+
 </script>
 </body>
 </html>
