@@ -3073,9 +3073,9 @@ function $(s){return document.querySelector(s);}
 
 ensureBtn();const u=window.updateUI;window.updateUI=function(){u&&u();ensureBtn();}
 window.WL_TextMap={world:WORLD,towns:TOWNS,openWorld,travelTo};
-// in travelTo(id) after state.location = n.name; ...
 })();
 
+</script>
 <!-- ==== WL Combat End Screen + openCombat override (FINAL, larger box, green skin) ==== -->
 <style>
   :root{--wl-bg:rgba(0,0,0,.65);--wl-b:rgba(120,255,120,.18);--wl-b2:rgba(120,255,120,.12);--wl-t:#c6ffd0;--wl-m:#8fb090}
@@ -3148,7 +3148,7 @@ window.WL_TextMap={world:WORLD,towns:TOWNS,openWorld,travelTo};
   </div>
 </div>
 
-
+<script>
 /* ---- end-screen helper ---- */
 (function(){
   const $=id=>document.getElementById(id);
@@ -3342,7 +3342,6 @@ window.WL_TextMap={world:WORLD,towns:TOWNS,openWorld,travelTo};
   /* ensure node is under <body> even if something moved it */
   (function(){ const n=document.getElementById('wl-combat-end'); if(n && n.parentNode!==document.body){ document.body.appendChild(n); }})();
 })();
-
 </script>
 </body>
 </html>
