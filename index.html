@@ -906,7 +906,7 @@ const PERKS = [
 ];
 
 /* ========= Enemies ========= */
-// tier: "wastes" | "work" | "Dust Marauders" | "rangers" etc.
+// tier: "wastes" | "work" | "Dust_Marauders" | "rangers" etc.
 const ENEMIES = [
   { id:"molerat",    name:"Molerat",    tier:"wastes",  hp:28, atk:6,  def:2,  spd:9,  reward:{ xp:10, caps: rnd(3,7) } },
   { id:"wild_dogs",  name:"Wild Dogs",  tier:"wastes",  hp:34, atk:7,  def:3,  spd:11, reward:{ xp:12, caps: rnd(4,9) } },
@@ -1622,7 +1622,7 @@ const FACTION_ACTIONS = {
     }
   ],
 
-  Dust_Marauders: [
+  dust_marauders: [
     {
       label: "Shakedown a toll post",
       run: () => {
