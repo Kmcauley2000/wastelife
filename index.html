@@ -104,7 +104,7 @@
   .faction-settlers{background:#d9f2d9;color:#225522;}
   .faction-rangers{background:#d9eaf2;color:#1d3d55;}
   .faction-scribes{background:#f2e9d9;color:#553d1d;}
-  .faction-raiders{background:#f2d9d9;color:#551d1d;}
+  .faction-Dust Marauders{background:#f2d9d9;color:#551d1d;}
   .faction-none{background:#eee;color:#444;}
 
 /* ── Faction Menu Enhancements ─────────────────────────────── */
@@ -119,7 +119,7 @@
 .faction-header.settlers { border-color:#3af53a; }
 .faction-header.rangers  { border-color:#1da1f2; }
 .faction-header.scribes  { border-color:#f2b84b; }
-.faction-header.raiders  { border-color:#ff4d4d; }
+.faction-header.Dust Marauders  { border-color:#ff4d4d; }
 
 .rep-bar {
   height: 12px;
@@ -888,7 +888,7 @@ const FACTIONS = [
   { id:"settlers", name:"Settlers Union", req: s=>s.C>=4, blurb:"Builders and traders striving for stability." },
   { id:"rangers", name:"Desert Rangers", req: s=>s.A>=5 && s.P>=5, blurb:"Lean, disciplined scouts of the wastes." },
   { id:"scribes", name:"Scribes of the Old World", req: s=>s.I>=6, blurb:"Archivists preserving tech and knowledge." },
-  { id:"raiders", name:"Dust Marauders", req: s=>s.S>=6 || s.L>=7, blurb:"Lawless plunderers—high risk, high reward." }
+  { id:"dust_marauders", name:"Dust Marauders", req: s=>s.S>=6 || s.L>=7, blurb:"Lawless plunderers—high risk, high reward." }
 ];
 
 const PERKS = [
@@ -900,16 +900,21 @@ const PERKS = [
 ];
 
 /* ========= Enemies ========= */
-// tier: "wastes" | "work" | "raiders" | "rangers" etc.
+// tier: "wastes" | "work" | "Dust Marauders" | "rangers" etc.
 const ENEMIES = [
   { id:"molerat",    name:"Molerat",    tier:"wastes",  hp:28, atk:6,  def:2,  spd:9,  reward:{ xp:10, caps: rnd(3,7) } },
   { id:"wild_dogs",  name:"Wild Dogs",  tier:"wastes",  hp:34, atk:7,  def:3,  spd:11, reward:{ xp:12, caps: rnd(4,9) } },
-  { id:"raider_thug",name:"Raider Thug",tier:"raiders", hp:42, atk:9,  def:4,  spd:10, reward:{ xp:16, caps: rnd(8,16) } },
   { id:"feral",      name:"Feral Ghoul",tier:"wastes",  hp:40, atk:8,  def:4,  spd:12, reward:{ xp:14, caps: rnd(6,12) } },
   { id:"scav_band",  name:"Scav Bandit",tier:"work",    hp:36, atk:8,  def:4,  spd:10, reward:{ xp:14, caps: rnd(7,13) } },
   { id:"mutant_verm",name:"Mutant Vermin", tier:"wastes", hp:30, atk:7, def:3, spd:13, reward:{ xp:12, caps: rnd(5,10) } },
-  { id:"raider_gun", name:"Raider Gunner", tier:"raiders", hp:50, atk:11, def:5, spd:12, reward:{ xp:20, caps: rnd(12,22) } },
   { id:"waste_stalker", name:"Wasteland Stalker", tier:"rangers", hp:46, atk:10, def:5, spd:14, reward:{ xp:18, caps: rnd(9,18) } },
+
+// ========= Dust Marauders (Texas Raiders) =========
+  { id:"dust_pistolero", name:"Dust Pistolero", tier:"dust_marauders", hp:46, atk:10, def:4, spd:13, reward:{ xp:18, caps: rnd(10,18) } },
+  { id:"rust_rider", name:"Rust Rider", tier:"dust_marauders", hp:54, atk:12, def:5, spd:12, reward:{ xp:22, caps: rnd(12,22) } },
+  { id:"buckshot_bandit", name:"Buckshot Bandit", tier:"dust_marauders", hp:58, atk:13, def:5, spd:11, reward:{ xp:24, caps: rnd(15,26) } },
+  { id:"oilfield_raider", name:"Oilfield Outlaw", tier:"dust_marauders", hp:62, atk:12, def:6, spd:12, reward:{ xp:28, caps: rnd(18,30) } },
+  { id:"dust_warlord", name:"Dust Warlord", tier:"dust_marauders", hp:72, atk:14, def:7, spd:13, reward:{ xp:34, caps: rnd(20,36) } },
 ];
 
 // Simple generator that picks by tier (falls back to wastes)
@@ -947,7 +952,7 @@ function newRun() {
     level: 1, xp: 0,
     job: "none",
     faction: "none",
-    inventory: ["Canteen","Junk","Duct Tape"],
+    inventory: ["Canteen","Junk","Duct Tape","Knife",],
     relationships: seedRelationships(),
     perks: [],
     pendingChoice: null,
@@ -1015,7 +1020,7 @@ function updateUI() {
 
   // reset + apply faction color class
   pillWrap.classList.remove(
-    "faction-settlers","faction-rangers","faction-scribes","faction-raiders","faction-none"
+    "faction-settlers","faction-rangers","faction-scribes","faction-Dust_Marauders","faction-none"
   );
   pillWrap.classList.add("faction-" + state.faction);
 
@@ -1163,7 +1168,7 @@ function yearlyEvent() {
   // faction flavored
   if (state.faction==="rangers") pool.push(evt_rangerPatrol);
   if (state.faction==="scribes") pool.push(evt_lostArchive);
-  if (state.faction==="raiders") pool.push(evt_shakedown);
+  if (state.faction==="Dust_Marauders") pool.push(evt_shakedown);
 
   const e = sample(pool);
   return e();
@@ -1428,7 +1433,7 @@ function evt_shakedown(){
 // One-click actions for each faction (shown in the Faction menu after you join)
 // ========= Faction Actions =========
 // NOTE: Each faction has repeatable actions here
-// - Add new actions inside settlers/rangers/scribes/raiders arrays
+// - Add new actions inside settlers/rangers/scribes/Dust_Marauders arrays
 // - Use changeRep() and changeKarma() for outcomes
 
 const FACTION_ACTIONS = {
@@ -1460,8 +1465,8 @@ const FACTION_ACTIONS = {
     {
       label: "Help build defenses (cost 8 caps)",
       run: () => {
-         // Small chance a raider scout pokes the line
-        if (maybeStartCombat(0.15, "raiders", "faction")) return;
+         // Small chance a Dust Marauder scout pokes the line
+        if (maybeStartCombat(0.15, "Dust_Marauders", "faction")) return;
         if (state.caps < 8) { log("Not enough caps for materials."); return; }
         state.caps -= 8;
         changeRep(+4);
@@ -1511,10 +1516,10 @@ const FACTION_ACTIONS = {
       }
     },
     {
-      label: "Track raiders",
+      label: "Track Dust Marauders",
       run: () => {
-          // High chance of raider combat
-        if (maybeStartCombat(0.50, "raiders", "faction")) return;
+          // High chance of Dust_Marauders combat
+        if (maybeStartCombat(0.50, "Dust_Marauders", "faction")) return;
         const tough = !skillCheck("A",13) || !skillCheck("S",12);
         if (tough) {
           damage(10);
@@ -1611,7 +1616,7 @@ const FACTION_ACTIONS = {
     }
   ],
 
-  raiders: [
+  Dust_Marauders: [
     {
       label: "Shakedown a toll post",
       run: () => {
@@ -1628,7 +1633,7 @@ const FACTION_ACTIONS = {
       label: "Raid a convoy",
       run: () => {
           // Often becomes a battle
-        if (maybeStartCombat(0.60, "raiders", "faction")) return;
+        if (maybeStartCombat(0.60, "Dust_Marauders", "faction")) return;
         const fail = !skillCheck("S",12) || !skillCheck("A",12);
         if (fail) {
           damage(12);
@@ -1660,8 +1665,8 @@ const FACTION_ACTIONS = {
     {
       label: "Pit fight",
       run: () => {
-          // Rarely, a rival champion steps in (treated as raiders tier)
-        if (maybeStartCombat(0.20, "raiders", "faction")) return;
+          // Rarely, a rival champion steps in (treated as Dust_Marauders tier)
+        if (maybeStartCombat(0.20, "Dust_Marauders", "faction")) return;
         const win = skillCheck("S",13) || skillCheck("A",13);
         if (win) {
           const prize = money(1.5) + 5;
@@ -1922,8 +1927,8 @@ function work(){
   // Risk + encounter profile per job
   const JOB_RISK = {
     scav:   { label: "Medium",       chance: 0.28, tier: "wastes"  },
-    trader: { label: "Medium",       chance: 0.18, tier: "raiders" },
-    guard:  { label: "High",         chance: 0.45, tier: "raiders" },
+    trader: { label: "Medium",       chance: 0.18, tier: "Dust_Marauders" },
+    guard:  { label: "High",         chance: 0.45, tier: "Dust_Marauders" },
     scribe: { label: "Low",          chance: 0.08, tier: "wastes"  },
     med:    { label: "Medium-High",  chance: 0.22, tier: "work"    },
     none:   { label: "—",            chance: 0.00, tier: "wastes"  }
@@ -2550,7 +2555,7 @@ function runSettlersChapter(){
   }
 
   if (ch === 2){
-    setChoice("Ch.3 — A Knife in the Dark: Raider scouts probe the outskirts. Your approach?", [
+    setChoice("Ch.3 — A Knife in the Dark: Dust Marauder scouts probe the outskirts. Your approach?", [
       { label:"Ambush them (A check)",
         run:()=>{
           const ok = skillCheck("A",12);
@@ -2650,7 +2655,7 @@ function settlersFinale(){
   if (f.truce){
     changeRep(+12); changeKarma(+6); gainXP(30);
     addItem("diplomats_coat", 1);
-    log("Ending: The Accord — A fragile ceasefire routes raiders away from Dustford.");
+    log("Ending: The Accord — A fragile ceasefire routes Dust Marauders away from Dustford.");
     log("Reward: Diplomat’s Coat (+4 DEF, +2 AGI), big reputation, XP.", "muted");
     updateUI();
     return { key:"Accord", title:"A fragile ceasefire holds." };
@@ -3893,8 +3898,8 @@ window.addEventListener("town:enterBuilding", (e) => {
 
       const ps = playerBattleStats();
       const atkBoostActive = (state.buffs?.atkBoost && (state.buffs.atkBoost.turns || state.buffs.atkBoost) > 0);
-      const baseAtk  = (gate.atk  != null ? gate.atk  : ps.atk);
-      const baseCrit = (gate.crit != null ? gate.crit : ps.crit);
+      const baseAtk  = (typeof gate.atk  === "number" && gate.atk  > 0) ? gate.atk  : ps.atk;
+      const baseCrit = (typeof gate.crit === "number" && gate.crit > 0) ? gate.crit : ps.crit;
       const totalAtk  = Math.max(1, baseAtk + (atkBoostActive ? 4 : 0));
       const totalCrit = clamp(baseCrit, 0, 0.5);
 
