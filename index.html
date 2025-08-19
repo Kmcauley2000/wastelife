@@ -3476,6 +3476,24 @@ function section(titleText){
   (function(){ const n=document.getElementById('wl-combat-end'); if(n && n.parentNode!==document.body){ document.body.appendChild(n); }})();
 })();
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
 /* Wastelife — Living World v0.5 (consolidated, no conflicts)
    - Social button
    - NPCs with Chat / Rumors / Trade / Hire / Lore / Request
@@ -3891,75 +3909,47 @@ function section(titleText){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-	
-
-/* =========================
-   Wastelife — NPC Upgrade (v2: guaranteed UI)
-   ========================= */
+	/* Wastelife — NPC Factions + Stats + Growth (non-breaking add-on) */
 (function () {
-  const WL = (window.WL = window.WL || {});
-  const log = (...a) => console.debug("[WL/NPCx]", ...a);
+  "use strict";
+  if (window.__WL_NPC_GROWTH__) return; window.__WL_NPC_GROWTH__ = true;
 
-  /* ---------- Factions ---------- */
-  const FACTIONS = {
-    "Unaffiliated": { color: "#c8c8c8" },
-    "Settlers Union": { color: "#6ec56e" },
-    "Desert Rangers": { color: "#f5d06e" },
-    "Scribes of the Old World": { color: "#7ec7f7" },
-    "Dust Marauders": { color: "#f58a6e" },
-  };
+  const W  = window;
+  const LW = W.LW || (W.LW = { state:{ npcs:[] } });
+  LW.state = LW.state || { npcs:[] };
 
-  /* ---------- Find/ensure NPC array ---------- */
-  function findNPCs() {
-    const c = [
-      window.state && state.npcs,
-      window.npcs,
-      window.NPCS,
-      window.game && game.npcs,
-      WL.npcs,
-    ].filter(Boolean);
-    for (const x of c) {
-      if (Array.isArray(x)) return x;
-      if (x && typeof x === "object" && Array.isArray(x.list)) return x.list;
-    }
-    WL.npcs = WL.npcs || [];
-    return WL.npcs;
+  /* -------- Factions (fallback names) -------- */
+  const FLIST = (Array.isArray(W.FACTIONS) && W.FACTIONS.length)
+    ? W.FACTIONS
+    : [
+      { id:"none",            name:"Independent" },
+      { id:"settlers",        name:"Settlers Union" },
+      { id:"rangers",         name:"Desert Rangers" },
+      { id:"scribes",         name:"Scribes of the Old World" },
+      { id:"dust_marauders",  name:"Dust Marauders" },
+    ];
+  const FNAME = fid => (FLIST.find(f=>f.id===fid)?.name) || (fid==="none" ? "Independent" : "Unknown");
+
+  /* -------- Ensure every NPC has stats/faction -------- */
+  function defaultStats() {
+    return { STR:3, PER:3, END:3, CHA:3, INT:3, AGI:3, LCK:3, HP:20, curHP:20 };
   }
-  const NPCS = findNPCs();
-
-  /* ---------- NPC schema, growth & leveling ---------- */
-  const DEFAULT_STATS = () => ({ STR:3,PER:3,END:3,CHA:3,INT:3,AGI:3,LCK:3, HP:20, curHP:20 });
-
-  function ensureNPC(n) {
-    if (!n) return n;
-    n.id = n.id || ("npc_" + (n.name||"").toLowerCase().replace(/[^a-z0-9]+/g,"_"));
-    n.role = n.role || "Civilian";
-    n.location = n.location || "Wanderer";
-    n.trust = typeof n.trust === "number" ? n.trust : 50;
-    n.faction = FACTIONS[n.faction] ? n.faction : (n.faction || "Unaffiliated");
-    n.level = n.level || 1;
-    n.xp = n.xp || 0;
-    n.nextXp = n.nextXp || (lvl => 10 + Math.floor(lvl*lvl*5));
-    n.points = n.points || 0;
-    n.stats = n.stats || DEFAULT_STATS();
-    n.maxHP = n.maxHP || (() => 15 + n.stats.END*3 + n.level*2);
-    n.stats.curHP = Math.min(n.stats.curHP || n.maxHP(), n.maxHP());
-    return n;
+  function assure(npc) {
+    if (!npc) return npc;
+    npc.role       = npc.role || "NPC";
+    npc.factionId  = npc.factionId || "none";
+    npc.level      = npc.level || 1;
+    npc.xp         = npc.xp || 0;
+    npc.nextXp     = npc.nextXp || (lvl => 10 + Math.floor(lvl*lvl*5));
+    npc.points     = npc.points || 0;
+    npc.stats      = npc.stats || defaultStats();
+    npc.maxHP      = npc.maxHP || (() => 15 + npc.stats.END*3 + npc.level*2);
+    npc.stats.curHP = Math.min(npc.stats.curHP || npc.maxHP(), npc.maxHP());
+    return npc;
   }
-  NPCS.forEach(ensureNPC);
+  (LW.state.npcs||[]).forEach(assure);
 
+  /* -------- Per-age growth -------- */
   function autoAllocate(n) {
     const biasByRole = {
       "Merc": ["STR","END","AGI"],
@@ -3967,21 +3957,20 @@ function section(titleText){
       "Scout Lt.": ["PER","AGI","INT"],
       "Field Medic": ["INT","END","CHA"],
       "Trader": ["CHA","LCK","PER"],
-      "Civilian": ["CHA","LCK","END"],
     };
+    const keys = ["STR","PER","END","CHA","INT","AGI","LCK"];
     const bias = biasByRole[n.role] || ["CHA","LCK","END"];
     while ((n.points||0) > 0) {
-      const key = Math.random()<0.7 ? bias[(Math.random()*bias.length)|0] :
-        ["STR","PER","END","CHA","INT","AGI","LCK"][(Math.random()*7)|0];
-      n.stats[key] = Math.min(10, (n.stats[key]||1)+1);
+      const k = Math.random() < 0.7 ? bias[(Math.random()*bias.length)|0] : keys[(Math.random()*keys.length)|0];
+      n.stats[k] = Math.min(10, (n.stats[k]||1)+1);
       n.points--;
     }
   }
-
   function grow(n) {
-    n.xp += 1 + Math.floor((n.trust||50)/50); // passive XP
-    if (Math.random()<0.05) n.trust = Math.min(100, (n.trust||50)+1);
-    if (Math.random()<0.1) { // tiny stat drift
+    if (!n || n.alive===false) return;
+    n.xp += 1 + Math.floor((n.trust||50)/50);        // passive XP
+    if (Math.random() < 0.05) n.trust = Math.min(100, (n.trust||50) + 1);  // warm up a bit
+    if (Math.random() < 0.10) {                      // tiny stat drift
       const k = ["STR","PER","END","CHA","INT","AGI","LCK"][(Math.random()*7)|0];
       n.stats[k] = Math.min(10, (n.stats[k]||1)+1);
     }
@@ -3990,159 +3979,131 @@ function section(titleText){
       n.level += 1;
       n.points = (n.points||0) + 2;
       autoAllocate(n);
-      n.stats.curHP = Math.min(n.maxHP(), n.stats.curHP + 5);
-      toast(`${n.name} reached level ${n.level}!`);
+      n.stats.curHP = Math.min(n.maxHP(), (n.stats.curHP||n.maxHP()) + 5);
+      (W.log||console.log)(`${n.name} reached level ${n.level}`);
     }
   }
+  function growAll(){ (LW.state.npcs||[]).forEach((n)=>{ assure(n); grow(n); }); }
+  W.WL_NPC_GROWTH = { growAll }; // optional manual use from console
 
-  // Hook common turn functions; also expose manual call
-  (function hookTurn(){
-    const fns = ["advanceTurn","nextTurn","endTurn","doTurn","tickTurn"];
-    let done=false;
-    for (const fn of fns) {
-      if (typeof window[fn] === "function") {
-        const orig = window[fn];
-        window[fn] = function(){
-          try { NPCS.forEach(ensureNPC); NPCS.forEach(grow); } catch(e){ console.warn(e); }
-          return orig.apply(this, arguments);
-        };
-        done=true; break;
-      }
+  /* Hook: whenever the user clicks Age Up, grow NPCs too */
+  function attachAgeHook() {
+    const btn = document.getElementById("btn-age");
+    if (!btn || btn.dataset._npcGrowth) return;
+    btn.dataset._npcGrowth = "1";
+    btn.addEventListener("click", () => setTimeout(growAll, 0));
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", attachAgeHook);
+  else attachAgeHook();
+
+  /* -------- NPC modal: inject faction + stats UI -------- */
+  // We wrap your LW.openNPC: call your original to open the modal, then replace the content.
+  const _openNPC = LW.openNPC;
+  function renderNPCPanel(npc, isNearby) {
+    // small style once
+    if (!document.getElementById("wl-npc-style")) {
+      const st = document.createElement("style");
+      st.id = "wl-npc-style";
+      st.textContent = `
+        .wl-npc-panel .chips{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin:8px 0 10px; }
+        .wl-npc-panel .chip{ text-align:center; padding:6px 8px; border:1px solid #3a3124; background:#1d1a15; border-radius:8px; }
+        .wl-npc-panel .bar{ height:6px; background:#2b2b2b; border-radius:6px; overflow:hidden; margin:4px 0 8px; }
+        .wl-npc-panel .bar>i{ display:block; height:6px; background:#a57a2a; }
+        .wl-npc-panel .btns{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+        .wl-npc-panel .btns .choice{ background:#2b241a; border:1px solid #4b3a22; border-radius:8px; padding:6px 10px; }
+      `;
+      document.head.appendChild(st);
     }
-    if (!done) WL.NPCx = Object.assign(WL.NPCx||{}, { growAll:()=>NPCS.forEach(grow) });
-  })();
 
-  /* ---------- Minimal UI helpers ---------- */
-  function el(tag, attrs={}, kids=[]) {
-    const n = document.createElement(tag);
-    Object.entries(attrs).forEach(([k,v])=>{
-      if (k==="class") n.className=v;
-      else if (k==="style") Object.assign(n.style, v);
-      else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2), v);
-      else n.setAttribute(k, v);
-    });
-    (Array.isArray(kids)?kids:[kids]).forEach(c => n.appendChild(typeof c==="string"?document.createTextNode(c):c));
-    return n;
-  }
-  function pct(a,b){ return Math.max(0, Math.min(100, Math.round((a/b)*100))); }
-  function toast(msg){ (WL.toast?WL.toast(msg):console.info(msg)); }
+    const xp = npc.xp|0, need = npc.nextXp(npc.level), pct = Math.max(0, Math.min(100, Math.round((xp/need)*100)));
+    const facName = FNAME(npc.factionId);
 
-  /* ---------- Enhanced panel ---------- */
-  function npcPanel(n) {
-    const faction = FACTIONS[n.faction] || FACTIONS["Unaffiliated"];
-    const xpPct = pct(n.xp, n.nextXp(n.level));
+    let html = `
+      <div class="wl-npc-panel">
+        <p><b>${npc.name}</b> (${npc.role})<br>
+        <span class="muted">Faction:</span> <b>${facName}</b><br>
+        Location: ${npc.locName || ""}${isNearby ? " (nearby)" : ""}<br>
+        Trust: ${npc.trust ?? 0}</p>
+        <div>Level ${npc.level} · XP ${xp}/${need}</div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        <div class="chips">
+          ${["STR","PER","END","CHA","INT","AGI","LCK"].map(k=>`<div class="chip">${k} ${npc.stats[k]}</div>`).join("")}
+        </div>
+    `;
 
-    const head = el("div", {style:{fontSize:"18px",marginBottom:"6px"}}, [
-      el("strong",{}, n.name)," ",
-      el("span",{style:{border:"1px solid #a57a2a",padding:"2px 6px",borderRadius:"6px",color:faction.color}}, n.faction)
-    ]);
-    const meta = el("div",{style:{opacity:.9,marginBottom:"8px"}},
-      `Role: ${n.role} · Location: ${n.location} · Trust: ${n.trust}`);
-    const xpBar = el("div",{style:{background:"#2b2b2b",height:"6px",borderRadius:"6px",marginTop:"4px",marginBottom:"8px"}},
-      el("div",{style:{width:xpPct+"%",height:"6px",borderRadius:"6px",background:"#a57a2a"}})
-    );
-    const stats = el("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"6px",marginBottom:"10px"}},
-      ["STR","PER","END","CHA","INT","AGI","LCK"].map(k =>
-        el("div",{style:{padding:"6px 8px",background:"#1d1a15",border:"1px solid #3a3124",borderRadius:"8px",textAlign:"center"}}, `${k} ${n.stats[k]}`)
-      )
-    );
-    const actions = [
-      ["Chat", ()=>{ n.trust=Math.min(100,n.trust+1); n.xp+=1; info(`${n.name} chats a while.`);} ],
-      ["Rumors", ()=>{ n.xp+=2; info(`${n.name} shares a rumor.`);} ],
-      ["Hire Guard", ()=>{ /merc/i.test(n.role)?(n.trust+=2,n.xp+=3,info(`${n.name} agrees—for a price.`)):(n.trust-=1,info(`${n.name} declines.`)); }],
-      ["Trade", ()=>{ n.trust+=1;n.xp+=2; info(`You trade with ${n.name}.`);} ],
-      ["Spar", ()=>{ const w = roll(n,"AGI",10+n.level); n.xp+=w?4:2; info(w?`Good spar.`:`They outclass you today.`);} ],
-      ["Gift", ()=>{ n.trust=Math.min(100,n.trust+4); n.xp+=1; info(`${n.name} appreciates the gift.`);} ],
-      ["Quest", ()=>{ const ok = roll(n,"INT",10); n.xp+=ok?3:1; info(ok?`${n.name} gives a task.`:`Nothing right now.`);} ],
-      ["Recruit", ()=>{ const ok = roll(n,"CHA",12); n.trust+= ok?3:-2; n.xp+=2; info(ok?`${n.name} may join soon.`:`Declines for now.`);} ],
-      ["Intimidate", ()=>{ const ok = roll(n,"STR",13); n.trust+= ok?-3:-6; n.xp+=2; info(ok?`They back down.`:`Backfires.`);} ],
-      ["Diplomacy", ()=>{ const ok = roll(n,"CHA",12); n.trust+= ok?4:-1; n.xp+= ok?3:1; info(ok?`Smoothed over.`:`Falls flat.`);} ],
-    ].map(([label,fn]) => el("button", {
-      style:{background:"#2b241a",border:"1px solid #4b3a22",borderRadius:"8px",padding:"6px 10px",cursor:"pointer"},
-      onclick: fn
-    }, label));
-
-    function info(t){ WL.toast?WL.toast(t):console.info(t); refresh(); }
-    function roll(n,key,dc){ const s=(n.stats[key]||3)+Math.floor(n.level/2)+(n.trust||0)/25; return s+(1+Math.floor(Math.random()*10))>=dc; }
-
-    const wrap = el("div", {style:{background:"#17130e",border:"1px solid #3a2a18",borderRadius:"10px",padding:"12px",marginBottom:"10px"}}, [
-      head, meta, el("div",{},[`Level ${n.level} · XP ${n.xp}/${n.nextXp(n.level)}`]), xpBar, stats,
-      el("div",{style:{display:"flex",flexWrap:"wrap",gap:"8px"}}, actions)
-    ]);
-
-    function refresh(){
-      // re-render into the same parent
-      const parent = wrap.parentNode;
-      const idx = Array.prototype.indexOf.call(parent.children, wrap);
-      parent.replaceChild(npcPanel(n), parent.children[idx]);
+    if (!isNearby) {
+      html += `<button class="choice" onclick="(function(){ LW.travelToId('${npc.locId}'); LW.openNPC('${npc.id}'); })()">Travel to ${npc.locName || ""}</button>`;
+    } else {
+      // keep your existing actions
+      html += `<div class="btns">
+        <button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>
+        <button class="choice" onclick="LW.talk('${npc.id}','rumor')">Ask for Rumors</button>
+        ${npc.role==="Trader" ? `<button class="choice" onclick="LW.talk('${npc.id}','trade')">Trade</button>` : ""}
+        ${npc.role==="Merc"   ? `<button class="choice" onclick="LW.talk('${npc.id}','hire')">Hire as Guard</button>` : ""}
+        ${npc.role==="Scribe" ? `
+          <button class="choice" onclick="LW.talk('${npc.id}','lore')">Share Knowledge</button>
+          <button class="choice" onclick="LW.talk('${npc.id}','request')">Request Research</button>` : ""}
+      </div>`;
     }
-    return wrap;
+    html += `</div>`;
+    return html;
   }
 
-  /* ---------- Floating button + modal ---------- */
-  function ensureModal(){
-    let m = document.getElementById("npcx-modal");
-    if (m) return m;
-    m = el("div",{id:"npcx-modal",style:{position:"fixed",inset:0,display:"none",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,.45)",zIndex:9999}});
-    const card = el("div",{id:"npcx-card",style:{width:"min(860px,92vw)",maxHeight:"86vh",overflow:"auto",background:"#0f0d0a",border:"1px solid #3a2a18",borderRadius:"12px",padding:"12px"}});
-    const close = el("div",{style:{textAlign:"right",marginBottom:"8px"}}, el("button",{onclick:()=>m.style.display="none",style:{cursor:"pointer"}}, "Close"));
-    card.appendChild(close); m.appendChild(card); document.body.appendChild(m); return m;
-  }
-  function openModal(){
-    const m = ensureModal();
-    const card = m.querySelector("#npcx-card");
-    while (card.children.length>1) card.removeChild(card.lastChild);
-    const title = el("div",{style:{fontSize:"20px",margin:"0 0 8px"}}, "Enhanced NPCs");
-    card.appendChild(title);
-    findNPCs().map(ensureNPC).forEach(n => card.appendChild(npcPanel(n)));
-    m.style.display = "flex";
-  }
-  function fab(){
-    let b = document.getElementById("npcx-fab");
-    if (b) return;
-    b = el("button",{id:"npcx-fab",style:{
-      position:"fixed",right:"16px",bottom:"16px",padding:"10px 12px",borderRadius:"999px",
-      background:"#a57a2a",border:"1px solid #704f13",color:"#111",fontWeight:"700",cursor:"pointer",zIndex:9999
-    }, onclick:openModal}, "NPC+");
-    document.body.appendChild(b);
-  }
-
-  /* ---------- (Optional) add “(Enhanced)” links next to names ---------- */
-  function attachEnhancedLinks(){
-    const containers = Array.from(document.querySelectorAll("*"))
-      .filter(n => /Here in Ironwood|Social\s*—\s*NPCs|NPCs/i.test(n.textContent||""));
-    const names = new Set(findNPCs().map(n=>n.name).filter(Boolean));
-    containers.forEach(c=>{
-      names.forEach(name=>{
-        const already = c.querySelector('[data-npcx-link="'+name+'"]');
-        if (already) return;
-        const elName = Array.from(c.querySelectorAll("*")).find(x => x.childNodes.length===1 && x.textContent.trim()===name);
-        if (!elName) return;
-        const link = el("a",{ "data-npcx-link":name, onclick:(e)=>{e.stopPropagation(); WL.openNPCEnhanced(name);} });
-        link.textContent = " (Enhanced)"; link.style.cursor="pointer"; link.style.opacity=".75";
-        elName.appendChild(link);
-      });
-    });
-  }
-  WL.openNPCEnhanced = function(nameOrId){
-    const n = findNPCs().map(ensureNPC).find(x => x.name===nameOrId || x.id===nameOrId);
-    if (!n) return alert("NPC not found");
-    const m = ensureModal();
-    const card = m.querySelector("#npcx-card");
-    while (card.children.length>1) card.removeChild(card.lastChild);
-    card.appendChild(npcPanel(n));
-    m.style.display = "flex";
+  // Helper to get current player location name/id using your existing helpers
+  const LOCNAME = (id) => {
+    try {
+      // The first block defined LOC in its own closure; we look for the visible text in the Social panel build
+      const map = { ironwood:"Ironwood", dustown:"Dustown", dunes:"Wasteland Dunes", ruins_zone:"Cracked Ruins", flats_zone:"Salt Flats", canyon:"Red Canyons", swamp:"Irrad. Swamp" };
+      return map[id] || id || "Unknown";
+    } catch { return id || "Unknown"; }
   };
 
-  // Observe DOM for your list; always render floating button
-  new MutationObserver(attachEnhancedLinks).observe(document.documentElement,{childList:true,subtree:true});
-  attachEnhancedLinks();
-  fab();
+  LW.openNPC = function(idOrObj){
+    // open the original modal first
+    if (typeof _openNPC === "function") _openNPC(idOrObj);
 
-  log("NPC upgrade v2 loaded — floating button added, growth active.");
+    // find npc, ensure stats, compute “nearby”
+    const id  = (typeof idOrObj === "string") ? idOrObj : idOrObj?.id;
+    const npc = (LW.state.npcs||[]).map(assure).find(n=>n.id===id) || (typeof idOrObj==="object" ? assure(idOrObj) : null);
+    if (!npc) return;
+
+    npc.locName = LOCNAME(npc.locId);
+
+    // are we in the same place? try to infer from the modal you already draw
+    const playerLocText = (window.state && (window.state.location || window.state.locationId)) || "";
+    const near = (String(playerLocText).toLowerCase().includes(String(npc.locName).toLowerCase())) ||
+                 (window.state && window.state.locationId && String(window.state.locationId)===String(npc.locId));
+
+    // replace modal content with upgraded panel
+    const mc = document.getElementById("modal-content") || document.querySelector("#npc-modal .content");
+    if (mc) mc.innerHTML = renderNPCPanel(npc, near);
+  };
+
+  /* -------- also enhance the Social table's NPC rows (optional) -------- */
+  // Adds “(Faction)” after role in the Social list once it opens next time.
+  const mo = new MutationObserver(() => {
+    document.querySelectorAll("#modal-content table tr").forEach(tr=>{
+      const btn = tr.querySelector("button.choice"); if (!btn) return;
+      const name = btn.textContent.trim();
+      const n = (LW.state.npcs||[]).find(x=>x.name===name); if (!n) return;
+      const cells = tr.querySelectorAll("td");
+      if (cells[1] && !cells[1].dataset.factionInjected) {
+        cells[1].dataset.factionInjected = "1";
+        cells[1].innerHTML = `${cells[1].innerHTML} <span class="muted">(${FNAME(n.factionId||"none")})</span>`;
+      }
+    });
+  });
+  mo.observe(document.documentElement, { childList:true, subtree:true });
+
+  // expose manual refresh if you want to call it
+  W.WL_NPC_GROWTH.refresh = function(){
+    // reopen last opened modal by calling LW.openNPC again with the same id is app-specific; skipping
+  };
 })();
+
 </script>
 </body>
 </html>
+
 
 
