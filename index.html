@@ -3538,9 +3538,22 @@ $("#btn-reset").onclick = reset;
 
 // --- Boot & wiring ---
 window.addEventListener("DOMContentLoaded", () => {
-  // Start a new run (or replace with load(); if you want to auto-load)
-  newRun();             // creates state and calls updateUI()
-  ensureCampaignState(); // safe now that state exists
+  // On page load, restore saved game if available. This allows resuming
+  // progress on mobile or desktop without manually clicking Load.
+  let loaded = false;
+  try {
+    if (localStorage.getItem("wastelife-save")) {
+      load();
+      ensureCampaignState();
+      updateUI();
+      loaded = true;
+    }
+  } catch(e){ console.error(e); }
+  if (!loaded) {
+    // Start a new run otherwise
+    newRun();             // creates state and calls updateUI()
+    ensureCampaignState(); // safe now that state exists
+  }
 
   // Main action buttons
   $("#btn-age").onclick = ageUp;
@@ -3561,6 +3574,16 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Make the faction pill open the faction menu
   $("#faction-pill-wrapper").onclick = openJoinFaction;
+});
+
+// Automatically save the game when the page is about to close or reload.
+// This ensures progress persists across browser sessions on mobile and desktop.
+window.addEventListener('beforeunload', () => {
+  try {
+    save();
+  } catch(e) {
+    console.error('Auto-save failed', e);
+  }
 });
 
 /* ====== TEXT MAP + Wilderness Integration (fixed) ======================= */
