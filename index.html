@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Wastelife: A Post-Apocalyptic Life Sim</title>
 <style>
 :root {
@@ -21,7 +21,7 @@
   --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
   --sans:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
 }
-
+/* layout.css */
 /* let page grow, always fill background */
 html,body{min-height:100%}
 
@@ -40,12 +40,10 @@ body {
 
 /* ======== ORIGINAL LAYOUT (unchanged) ======== */
 .wrap{max-width:1200px;margin:32px auto;padding:0 16px;}
+
 header{display:grid;gap:12px;grid-template-columns:1fr;margin-bottom:16px;}
-.topbar{display:grid;gap:12px;grid-template-columns:1.1fr 1fr;}
-@media(max-width:1000px){.topbar{grid-template-columns:1fr}}
+
 .grid{display:grid;gap:12px;grid-template-columns:330px 1fr;}
-@media(max-width:1000px){.grid{grid-template-columns:1fr}}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
 /* ======== Theming only (colors), layout preserved ======== */
 .card{
@@ -55,72 +53,24 @@ header{display:grid;gap:12px;grid-template-columns:1fr;margin-bottom:16px;}
   border-radius:var(--radius);
   padding:14px;
 }
-.title{
-  font-family:var(--mono);
-  color:var(--accent);
-  letter-spacing:.5px;
-  display:flex;align-items:center;gap:10px;
-  font-size:18px;margin:0 0 6px;
-  text-shadow:0 1px 0 rgba(0,0,0,.35);
-}
-.pill{
-  border:1px solid rgba(227,143,43,.35);
-  padding:6px 10px;border-radius:999px;
-  font-family:var(--mono);
-  background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
-}
-.stat{margin:8px 0}
-.stat-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:var(--mono)}
-.bar{height:12px;border-radius:8px;background:rgba(227,143,43,.12);overflow:hidden;border:1px solid rgba(227,143,43,.32)}
-.bar>i{display:block;height:100%;background:var(--accent);box-shadow:inset 0 0 12px rgba(0,0,0,.4)}
-.bar.warn>i{background:var(--warn)}
-.bar.danger>i{background:var(--danger)}
 
 .actions{display:grid;gap:8px}
+
 .actions button{
   all:unset;cursor:pointer;padding:10px 12px;border-radius:10px;
   border:1px solid rgba(227,143,43,.35);
   background:linear-gradient(180deg, rgba(227,143,43,.10), rgba(0,0,0,.25));
   font-family:var(--mono);color:var(--text)
 }
+
 .actions button:hover{border-color:var(--accent)}
+
 .actions .group{display:grid;gap:8px}
 
-.log{height:540px;overflow:auto;padding-right:6px}
-.entry{
-  padding:10px 12px;border-left:3px solid rgba(227,143,43,.35);
-  background:rgba(0,0,0,.22);border-radius:10px;margin:8px 0
-}
-.entry p{margin:0}
-.choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.choice{all:unset;cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid rgba(227,143,43,.35);font-family:var(--mono)}
-.choice:hover{border-color:var(--accent)}
-
-.muted{color:var(--muted)}
-.hr{height:1px;background:rgba(227,143,43,.28);margin:10px 0}
 footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.linklike{all:unset;cursor:pointer;color:var(--accent);font-family:var(--mono)}
-.dangerous{color:var(--danger)}
-.center{text-align:center}
-
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:10;}
-.modal{width:min(880px,92vw);max-height:80vh;overflow:auto}
-.modal .title{
-  position:sticky;top:0;
-  background:linear-gradient(180deg, rgba(26,21,18,1), rgba(26,21,18,.86));
-  padding:14px;border-bottom:1px solid rgba(227,143,43,.28);z-index:1
-}
-.kv{display:grid;grid-template-columns:160px 1fr;gap:8px;margin:10px 0;font-family:var(--mono)}
-.small{font-size:12px}
-.hidden{display:none!important}
 
 /* faction pill theming (slugged) */
 #faction-pill-wrapper{cursor:pointer;transition:background .2s,color .2s;}
-.faction-settlers{background:#efe6d4;color:#4b3a20;}          /* adobe tan */
-.faction-rangers{background:#d9e8e0;color:#204535;}           /* ranger green */
-.faction-scribes{background:#e8e1f2;color:#352a55;}           /* archivist violet */
-.faction-dust_marauders{background:#f0e0cc;color:#5a2b14;}    /* dusty leather */
-.faction-none{background:#ddd;color:#333;}
 
 /* ── Faction Menu Enhancements (colors only) ───────────────── */
 .faction-header {
@@ -130,10 +80,129 @@ footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   background: rgba(0,0,0,.3);
   border: 1px solid rgba(227,143,43,.35);
 }
+
 .faction-header.settlers       { border-color:#c48b40; }
+
 .faction-header.rangers        { border-color:#3a8f6b; }
+
 .faction-header.scribes        { border-color:#8a78c4; }
-.faction-header.dust_marauders { border-color:#e38f2b; } /* fixed slug */
+
+.faction-header.dust_marauders { border-color:#e38f2b; }
+
+/* Header */
+  #wl-combat-end .wl-hdr{
+    padding:16px 18px!important;
+    border-bottom:1px solid rgba(227,143,43,.28)!important;
+    background:linear-gradient(180deg, rgba(26,21,18,1), rgba(26,21,18,.86))!important;
+    display:flex!important; gap:12px; align-items:center;
+  }
+
+/* Body */
+  #wl-combat-end .wl-body{ padding:22px 22px 8px!important }
+
+#wl-combat-end .wl-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px }
+
+/* Actions (match .actions/.choice look) */
+  #wl-combat-end .wl-actions{
+    display:flex!important; justify-content:flex-end; gap:10px;
+    padding:16px 22px 22px;
+  }
+/* components.css */
+.pill{
+  border:1px solid rgba(227,143,43,.35);
+  padding:6px 10px;border-radius:999px;
+  font-family:var(--mono);
+  background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
+}
+
+.bar{height:12px;border-radius:8px;background:rgba(227,143,43,.12);overflow:hidden;border:1px solid rgba(227,143,43,.32)}
+
+.bar>i{display:block;height:100%;background:var(--accent);box-shadow:inset 0 0 12px rgba(0,0,0,.4)}
+
+.bar.warn>i{background:var(--warn)}
+
+.bar.danger>i{background:var(--danger)}
+
+.entry{
+  padding:10px 12px;border-left:3px solid rgba(227,143,43,.35);
+  background:rgba(0,0,0,.22);border-radius:10px;margin:8px 0
+}
+
+.entry p{margin:0}
+
+.choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:10;}
+
+.modal{width:min(880px,92vw);max-height:80vh;overflow:auto}
+
+.modal .title{
+  position:sticky;top:0;
+  background:linear-gradient(180deg, rgba(26,21,18,1), rgba(26,21,18,.86));
+  padding:14px;border-bottom:1px solid rgba(227,143,43,.28);z-index:1
+}
+
+/* Solid background for modals only */
+.modal.card { background: var(--panel); }
+/* game.css */
+.topbar{display:grid;gap:12px;grid-template-columns:1.1fr 1fr;}
+
+@media(max-width:1000px){.topbar{grid-template-columns:1fr}}
+
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.title{
+  font-family:var(--mono);
+  color:var(--accent);
+  letter-spacing:.5px;
+  display:flex;align-items:center;gap:10px;
+  font-size:18px;margin:0 0 6px;
+  text-shadow:0 1px 0 rgba(0,0,0,.35);
+}
+
+.stat{margin:8px 0}
+
+.stat-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:var(--mono)}
+
+.log{height:540px;overflow:auto;padding-right:6px}
+
+.choice{all:unset;cursor:pointer;padding:8px 10px;border-radius:8px;border:1px solid rgba(227,143,43,.35);font-family:var(--mono)}
+
+.choice:hover{border-color:var(--accent)}
+
+.muted{color:var(--muted)}
+
+.hr{height:1px;background:rgba(227,143,43,.28);margin:10px 0}
+
+.linklike{all:unset;cursor:pointer;color:var(--accent);font-family:var(--mono)}
+
+.dangerous{color:var(--danger)}
+
+.center{text-align:center}
+
+.kv{display:grid;grid-template-columns:160px 1fr;gap:8px;margin:10px 0;font-family:var(--mono)}
+
+.small{font-size:12px}
+
+.hidden{display:none!important}
+
+.faction-settlers{background:#efe6d4;color:#4b3a20;}
+
+/* adobe tan */
+.faction-rangers{background:#d9e8e0;color:#204535;}
+
+/* ranger green */
+.faction-scribes{background:#e8e1f2;color:#352a55;}
+
+/* archivist violet */
+.faction-dust_marauders{background:#f0e0cc;color:#5a2b14;}
+
+/* dusty leather */
+.faction-none{background:#ddd;color:#333;}
+
+/* fixed slug */
 
 .rep-bar {
   height: 12px;
@@ -143,6 +212,7 @@ footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   overflow: hidden;
   margin: 4px 0;
 }
+
 .rep-bar > i { display:block; height:100%; background:var(--accent); }
 
 .faction-action {
@@ -152,105 +222,268 @@ footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   padding: 10px;
   margin: 8px 0;
 }
+
 .faction-action .label {
   font-family: var(--mono);
   color: var(--accent);
   margin-bottom: 6px;
 }
 
-/* Solid background for modals only */
-.modal.card { background: var(--panel); }
-</style>
+/* --- End-of-Battle Overlay — themed to Wastelife globals --- */
+  /* Uses your existing :root vars:
+     --bg --panel --accent --accent-dim --danger --warn --ok --text --muted --shadow --radius --mono --sans */
+
+  /* Overlay + centering (hardened) */
+  #wl-combat-end{
+    position:fixed!important; inset:0!important;
+    display:none; align-items:center; justify-content:center;
+    z-index:2147483647!important;
+    background:rgba(0,0,0,.6); /* match .modal-backdrop */
+    font-family:var(--sans); color:var(--text);
+  }
+
+#wl-combat-end.wl-show{ display:flex!important }
+
+#wl-combat-end *{ box-sizing:border-box }
+
+/* Modal — larger */
+  #wl-combat-end .wl-modal{
+    display:block!important;
+    width:min(900px,98vw)!important; max-width:98vw; min-height:420px!important;
+    background:var(--panel)!important;
+    border:1px solid rgba(227,143,43,.28)!important; /* accent border */
+    border-radius:var(--radius)!important;
+    box-shadow:var(--shadow)!important;
+    color:var(--text);
+    overflow:hidden;
+  }
+
+#wl-combat-end .wl-icon{
+    width:44px; height:44px; border-radius:12px;
+    display:grid; place-items:center; font-weight:800;
+    background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
+    border:1px solid rgba(227,143,43,.28);
+    color:var(--accent);
+    font-family:var(--mono);
+    text-shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+
+#wl-combat-end .wl-ttl{
+    margin:0; font-size:20px;
+    font-family:var(--mono);
+    color:var(--accent);
+    letter-spacing:.5px;
+    text-shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+
+#wl-combat-end .wl-sub{ margin:4px 0 0; color:var(--muted); font-size:13px }
+
+/* Cards */
+  #wl-combat-end .wl-card{
+    background:linear-gradient(180deg, rgba(227,143,43,.06), rgba(0,0,0,.08));
+    border:1px solid rgba(227,143,43,.28);
+    border-radius:var(--radius);
+    padding:14px;
+  }
+
+#wl-combat-end .wl-card h4{
+    margin:0 0 6px; font-size:12px; color:var(--muted); font-family:var(--mono)
+  }
+
+#wl-combat-end .wl-big{ font-size:32px; font-weight:900; color:var(--text) }
+
+#wl-combat-end .wl-badge{
+    padding:3px 8px; font-size:11px; border-radius:999px;
+    background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
+    border:1px solid rgba(227,143,43,.28);
+    color:var(--muted);
+    font-family:var(--mono);
+  }
+
+/* Loot chips */
+  #wl-combat-end .wl-loot{ display:flex; gap:8px; flex-wrap:wrap }
+
+#wl-combat-end .wl-loot .wl-chip{
+    font-size:12px; padding:6px 10px; border-radius:999px;
+    background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
+    border:1px solid rgba(227,143,43,.35);
+    color:var(--text);
+    font-family:var(--mono);
+  }
+
+#wl-combat-end .wl-note{ margin-top:10px; font-size:12px; color:var(--muted) }
+
+#wl-combat-end .wl-btn{
+    all:unset; cursor:pointer; padding:10px 14px; border-radius:10px;
+    border:1px solid rgba(227,143,43,.35);
+    background:linear-gradient(180deg, rgba(227,143,43,.10), rgba(0,0,0,.25));
+    color:var(--text);
+    font-family:var(--mono);
+  }
+
+#wl-combat-end .wl-btn:hover{ border-color:var(--accent) }
+
+#wl-combat-end .wl-btn.wl-primary{
+    background:linear-gradient(180deg, rgba(227,143,43,.14), rgba(0,0,0,.28));
+    border-color:rgba(227,143,43,.45);
+  }
+
+/* Outcome icon tints */
+  #wl-combat-end.wl-win .wl-icon{
+    color:var(--ok);
+    box-shadow: inset 0 0 0 1px rgba(121,179,123,.35);
+  }
+
+#wl-combat-end.wl-lose .wl-icon{
+    color:var(--danger);
+    box-shadow: inset 0 0 0 1px rgba(198,69,58,.35);
+  }
+
+#wl-combat-end.wl-flee .wl-icon{
+    color:var(--warn);
+    box-shadow: inset 0 0 0 1px rgba(242,193,78,.35);
+  }
+
+@media(max-width:560px){
+    #wl-combat-end .wl-grid{ grid-template-columns:1fr }
+  }</style>
+</head>
+<body>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Wastelife: A Post-Apocalyptic Life Sim</title>
+<link rel="stylesheet" href="layout/variables/variables.css">
+<link rel="stylesheet" href="layout/layout/layout.css">
+<link rel="stylesheet" href="layout/components/components.css">
+<link rel="stylesheet" href="layout/game/game.css">
 </head>
 <body>
 <div class="wrap">
-  <header class="card">
-    <h1 class="title">WASTELIFE ▸ <span id="header-status" class="muted">new run</span></h1>
-    <div class="topbar">
-      <div class="card">
-        <div class="row">
-          <div class="pill">Name: <b id="name">—</b></div>
+<header class="card">
+<h1 class="title">WASTELIFE ▸ <span class="muted" id="header-status">new run</span></h1>
+<div class="topbar">
+<div class="card">
+<div class="row">
+<div class="pill">Name: <b id="name">—</b></div>
 <!-- Stat pills row -->
 <div class="pills">
-  <div class="pill">Age: <b id="age">18</b></div>
-  <div class="pill">HP: <b id="hp">100/100</b></div>
-  <div class="pill">Caps: <b id="caps">0</b></div>
-  <div class="pill">Karma: <b id="karma">0</b></div>
-  <div class="pill">Level: <b id="level">1</b> (<span id="xp">0</span> XP)</div>
-  <div class="pill">RAD: <b id="rad">0</b></div>
-  <!-- Unified clickable Faction pill -->
-  <div class="pill" id="faction-pill-wrapper">
+<div class="pill">Age: <b id="age">18</b></div>
+<div class="pill">HP: <b id="hp">100/100</b></div>
+<div class="pill">Caps: <b id="caps">0</b></div>
+<div class="pill">Karma: <b id="karma">0</b></div>
+<div class="pill">Level: <b id="level">1</b> (<span id="xp">0</span> XP)</div>
+<div class="pill">RAD: <b id="rad">0</b></div>
+<!-- Unified clickable Faction pill -->
+<div class="pill" id="faction-pill-wrapper">
     Faction: <b id="faction-pill">Unaffiliated</b>
-  </div>
+</div>
+</div>
+<div class="row" id="special" style="margin-top:8px; flex-wrap:wrap"></div>
+</div>
+<div class="card">
+<div class="row">
+<div class="pill">Origin: <b id="origin">—</b></div>
+<div class="pill">Job: <b id="job">—</b></div>
+<div class="pill">Location: <b id="location">—</b></div>
+<div class="pill">Year: <b id="year">2165</b></div>
+</div>
+<div class="hr"></div>
+<div class="row small">
+<span class="muted">Tip: Hit “Age Up” yearly. Choices affect S.P.E.C.I.A.L., caps, karma, and survival.</span>
+</div>
+</div>
+</div>
+</div></header>
+<main class="grid">
+<aside class="card">
+<div class="title">Actions</div>
+<div class="actions">
+<div class="group">
+<button id="btn-age">▸ Age Up (1 year)</button>
+<button id="btn-explore">Explore the Wasteland</button>
+<button id="btn-work">Work / Scavenge</button>
+<button id="btn-heal">Treat Wounds / AntiRad (Cost: 12 Caps)</button>
+</div>
+<div class="hr"></div>
+<div class="group">
+<button id="btn-inventory">Inventory</button>
+<button id="btn-trade">Visit Trader</button>
+<button id="btn-join-faction">Join a Faction</button>
+<button id="btn-perks">Perks</button>
+        <!-- New Job Board button for NPC tasks -->
+        <button id="btn-jobboard">Job Board</button>
+
+        <!-- New Settlement button for base management -->
+        <button id="btn-settlement">Your Settlement</button>
+</div>
+<div class="hr"></div>
+<div class="group">
+<button id="btn-save">Save</button>
+<button id="btn-load">Load</button>
+<button class="dangerous" id="btn-reset">New Run</button>
+</div>
+</div>
+</aside>
+<section class="card">
+<div class="title">Life Log</div>
+<div class="log" id="log"></div>
+<footer>
+<span class="muted small">Wastelife is an original, fan-made life sim. Survive, thrive, and make choices. No two runs are the same.</span>
+</footer>
+</section>
+</main>
+</div>
+ Modals 
+<div class="modal-backdrop" id="modal-backdrop">
+<div aria-modal="true" class="card modal" role="dialog">
+<h2 class="title" id="modal-title">Modal</h2>
+<div id="modal-content"></div>
+<div class="hr"></div>
+<div class="row" style="padding:0 14px 14px">
+<button class="linklike" id="modal-close">Close</button>
+</div>
+</div>
 </div>
 
-        <div id="special" class="row" style="margin-top:8px; flex-wrap:wrap"></div>
-      </div>
-      <div class="card">
-        <div class="row">
-          <div class="pill">Origin: <b id="origin">—</b></div>
-          <div class="pill">Job: <b id="job">—</b></div>
-          <div class="pill">Location: <b id="location">—</b></div>
-          <div class="pill">Year: <b id="year">2165</b></div>
-        </div>
-        <div class="hr"></div>
-        <div class="row small">
-          <span class="muted">Tip: Hit “Age Up” yearly. Choices affect S.P.E.C.I.A.L., caps, karma, and survival.</span>
-        </div>
-      </div>
-    </div>
-  </header>
 
-  <main class="grid">
-    <aside class="card">
-      <div class="title">Actions</div>
-      <div class="actions">
-        <div class="group">
-          <button id="btn-age">▸ Age Up (1 year)</button>
-          <button id="btn-explore">Explore the Wasteland</button>
-          <button id="btn-work">Work / Scavenge</button>
-          <button id="btn-heal">Treat Wounds / AntiRad (Cost: 12 Caps)</button>
-        </div>
-        <div class="hr"></div>
-        <div class="group">		
-		<button id="btn-inventory">Inventory</button>
-		<button id="btn-trade">Visit Trader</button>
-		<button id="btn-join-faction">Join a Faction</button>
-		<button id="btn-perks">Perks</button>
-        </div>
-        <div class="hr"></div>
-        <div class="group">
-          <button id="btn-save">Save</button>
-          <button id="btn-load">Load</button>
-          <button id="btn-reset" class="dangerous">New Run</button>
-        </div>
-      </div>
-    </aside>
-
-    <section class="card">
-      <div class="title">Life Log</div>
-      <div id="log" class="log"></div>
-      <footer>
-        <span class="muted small">Wastelife is an original, fan-made life sim. Survive, thrive, and make choices. No two runs are the same.</span>
-      </footer>
-    </section>
-  </main>
+<div aria-describedby="wl-desc" aria-labelledby="wl-title" aria-modal="true" class="wl-overlay" id="wl-combat-end" role="dialog">
+<div class="wl-modal" role="document">
+<div class="wl-hdr">
+<div class="wl-icon" id="wl-icon">★</div>
+<div>
+<h2 class="wl-ttl" id="wl-title">Battle Result</h2>
+<div class="wl-sub" id="wl-desc">You win!</div>
+</div>
+</div>
+<div class="wl-body">
+<div class="wl-grid">
+<div class="wl-card">
+<h4>Rewards</h4>
+<div class="wl-big"><span id="wl-xp">+0</span> <span class="wl-badge">XP</span></div>
+<div class="wl-sub">Caps: <b id="wl-caps">0</b></div>
+</div>
+<div class="wl-card">
+<h4>Loot</h4>
+<div class="wl-loot" id="wl-loot"><span class="wl-sub">None</span></div>
+</div>
+</div>
+<div class="wl-note" id="wl-note"></div>
+</div>
+<div class="wl-actions">
+<button class="wl-btn" id="wl-close">Close</button>
+<button class="wl-btn wl-primary" id="wl-again">Continue</button>
+</div>
+</div>
 </div>
 
-<!-- Modals -->
-<div id="modal-backdrop" class="modal-backdrop">
-  <div class="card modal" role="dialog" aria-modal="true">
-    <h2 class="title" id="modal-title">Modal</h2>
-    <div id="modal-content"></div>
-    <div class="hr"></div>
-    <div class="row" style="padding:0 14px 14px">
-      <button class="linklike" id="modal-close">Close</button>
-    </div>
-  </div>
-</div>
+ ============== Hard-wired Faction NPCs + Faction chips + Modal faction line ============== 
 
-<script>
 
+<!-- Inline scripts -->
+<script>// main.js
 // ========= Utility =========
 // NOTE: These helpers ( $, el, rnd, sample, clamp ) are general-purpose.
 // Add new helper functions here if you want them available everywhere.
@@ -969,6 +1202,11 @@ function newRun() {
     buffs: { radShield:{turns:0}, fleeBoost:0, atkBoost:0, strEnd:0, percInt:0 },
   };
 
+  // Initialize per-faction growth state when starting a new run
+  initFactionState();
+  // Initialize settlement/base state for this run
+  if (typeof initSettlement === "function") initSettlement();
+
   log(`You begin at age 18...`);
   log(`Your S.P.E.C.I.A.L.: ${SPECIAL_KEYS.map(k => k + ":" + state.special[k]).join(" ")}`, "muted");
   updateUI();
@@ -1676,6 +1914,303 @@ const FACTION_ACTIONS = {
   ]
 }; // <-- end FACTION_ACTIONS
 
+/*
+ * Extra faction actions that unlock as factions grow
+ * Each entry contains a required minimum level and an action definition.
+ * The getFactionActions() helper (defined later) will append these actions
+ * when the corresponding faction’s level meets or exceeds the threshold.
+ */
+const FACTION_EXTRA_ACTIONS = {
+  settlers: [
+    { level: 3, action: {
+        label: "Establish trade route",
+        run: () => {
+          // Help open a new trade corridor. Small chance of bandit attack.
+          if (maybeStartCombat(0.20, "Dust_Marauders", "faction")) return;
+          const earn = money(1.3) + 8;
+          state.caps += earn;
+          changeRep(+4);
+          changeKarma(+1);
+          gainXP(12);
+          log(`You negotiate and protect a new trade route. +${earn} caps, +rep, +karma, +XP.`);
+        }
+      }
+    },
+    { level: 5, action: {
+        label: "Fortify remote outpost",
+        run: () => {
+          if (state.caps < 10) { log("You need 10 caps to help fortify the outpost."); return; }
+          // Chance of Dust Marauder scouts interrupting the work
+          if (maybeStartCombat(0.25, "Dust_Marauders", "faction")) return;
+          state.caps -= 10;
+          changeRep(+6);
+          gainXP(16);
+          // Grow Settlers territory when fortifying an outpost
+          if (state.factions && state.factions.settlers) {
+            state.factions.settlers.territory = (state.factions.settlers.territory || 1) + 1;
+          }
+          log("You strengthen a far-flung outpost. The Settlers gain territory. +rep, +XP.");
+        }
+      }
+    },
+    { level: 7, action: {
+        label: "Organize alliance",
+        run: () => {
+          changeRep(+8);
+          changeKarma(+3);
+          gainXP(20);
+          log("You broker an alliance between settlements. The Union's influence soars. +rep, +karma, +XP.");
+        }
+      }
+    }
+  ],
+  rangers: [
+    { level: 3, action: {
+        label: "Coordinate patrol sweep",
+        run: () => {
+          // Slightly higher chance of a patrol encounter
+          if (maybeStartCombat(0.30, "rangers", "faction")) return;
+          if (skillCheck("P", 13)) {
+            changeRep(+4);
+            gainXP(14);
+            log("You lead a coordinated sweep, spotting threats early. +rep, +XP.");
+          } else {
+            damage(5);
+            gainXP(8);
+            log("Your sweep hits a trap. HP -5, +XP.");
+          }
+        }
+      }
+    },
+    { level: 5, action: {
+        label: "Major anti-raider operation",
+        run: () => {
+          // Large scale operation against raider bands
+          if (maybeStartCombat(0.65, "Dust_Marauders", "faction")) return;
+          const haul = money(1.5) + 10;
+          state.caps += haul;
+          changeRep(+6);
+          changeKarma(+2);
+          gainXP(18);
+          log(`You spearhead a major operation against raiders. +${haul} caps, +rep, +karma, +XP.`);
+        }
+      }
+    },
+    { level: 7, action: {
+        label: "Secure wastes region",
+        run: () => {
+          // Pacify a dangerous area; occasional wildlife attack
+          if (maybeStartCombat(0.40, "wastes", "faction")) return;
+          changeRep(+10);
+          changeKarma(+3);
+          gainXP(22);
+          if (state.factions && state.factions.rangers) {
+            state.factions.rangers.territory = (state.factions.rangers.territory || 1) + 1;
+          }
+          log("You lead an expedition to pacify a large swath of the wastes. The Rangers expand their patrol zones. +rep, +karma, +XP.");
+        }
+      }
+    }
+  ],
+  scribes: [
+    { level: 3, action: {
+        label: "Restore old archive",
+        run: () => {
+          // Costs a bit of funding to restore tech
+          if (state.caps < 8) { log("You need 8 caps to purchase tools for the restoration."); return; }
+          if (maybeStartCombat(0.10, "wastes", "faction")) return;
+          state.caps -= 8;
+          changeRep(+5);
+          gainXP(16);
+          if (typeof addItem === "function") addItem("holotape", 1);
+          log("You help restore an archive, uncovering lost data. +rep, +XP, found a holotape.");
+        }
+      }
+    },
+    { level: 5, action: {
+        label: "Prototype testing",
+        run: () => {
+          if (state.caps < 10) { log("You need 10 caps for materials for the prototype test."); return; }
+          state.caps -= 10;
+          if (maybeStartCombat(0.20, "wastes", "faction")) return;
+          if (skillCheck("I", 13)) {
+            changeRep(+6);
+            gainXP(18);
+            if (typeof addItem === "function") addItem("laser_pistol", 1);
+            log("The prototype works! You secure a laser pistol. +rep, +XP.");
+          } else {
+            rad(6);
+            log("The prototype sputters and leaks radiation. RAD +6.");
+          }
+        }
+      }
+    },
+    { level: 7, action: {
+        label: "Major research breakthrough",
+        run: () => {
+          if (state.caps < 14) { log("You need 14 caps to fund the breakthrough."); return; }
+          state.caps -= 14;
+          if (maybeStartCombat(0.20, "wastes", "faction")) return;
+          changeRep(+8);
+          changeKarma(+3);
+          gainXP(24);
+          if (typeof addItem === "function") addItem("laser_rifle", 1);
+          log("Your research unlocks a pre-war weapon: a laser rifle! +rep, +karma, +XP.");
+        }
+      }
+    }
+  ],
+  dust_marauders: [
+    { level: 3, action: {
+        label: "Territory expansion raid",
+        run: () => {
+          // High risk raid to seize land
+          if (maybeStartCombat(0.50, "Dust_Marauders", "faction")) return;
+          const loot = money(1.6) + 7;
+          state.caps += loot;
+          changeRep(+5);
+          changeKarma(-6);
+          gainXP(14);
+          if (state.factions) {
+            // Expand Marauders territory and shrink Settlers territory
+            if (state.factions.dust_marauders) {
+              state.factions.dust_marauders.territory = (state.factions.dust_marauders.territory || 1) + 1;
+            }
+            if (state.factions.settlers) {
+              state.factions.settlers.territory = Math.max(1, (state.factions.settlers.territory || 1) - 1);
+            }
+          }
+          log(`You raid new lands. +${loot} caps, +rep, Karma -6, +XP. Dust Marauders expand their territory.`);
+        }
+      }
+    },
+    { level: 5, action: {
+        label: "Council of War",
+        run: () => {
+          if (state.caps < 8) { log("You need 8 caps to fund the council's bribes."); return; }
+          state.caps -= 8;
+          // Some ranger patrols may interfere
+          if (maybeStartCombat(0.30, "rangers", "faction")) return;
+          changeRep(+6);
+          changeKarma(-8);
+          gainXP(18);
+          if (state.factions && state.factions.dust_marauders) {
+            state.factions.dust_marauders.power = (state.factions.dust_marauders.power || 10) + 5;
+          }
+          log("You broker deals and secure resources. The war council swells your faction's power. +rep, +karma, +XP.");
+        }
+      }
+    },
+    { level: 7, action: {
+        label: "Launch war campaign",
+        run: () => {
+          // Near certain battle; measure success by skill
+          if (maybeStartCombat(0.80, "Dust_Marauders", "faction")) return;
+          const success = skillCheck("S", 14) || skillCheck("A", 14);
+          if (success) {
+            const loot = money(2.0) + 15;
+            state.caps += loot;
+            changeRep(+8);
+            changeKarma(-12);
+            gainXP(22);
+            if (state.factions && state.factions.dust_marauders) {
+              state.factions.dust_marauders.power = (state.factions.dust_marauders.power || 10) + 8;
+            }
+            log(`Your war campaign conquers towns. +${loot} caps, +rep, Karma -12, +XP. Power surge.`);
+          } else {
+            damage(12);
+            changeRep(-2);
+            log("The campaign stalls; your wounds slow you. HP -12.");
+          }
+        }
+      }
+    }
+  ]
+};
+
+/*
+ * Initialize faction state at the start of a new game or when loading an old save.
+ * Each faction gets default values for level, power, territory, and resources.
+ */
+function initFactionState() {
+  if (!state) return;
+  state.factions = state.factions || {};
+  // Create entries for each faction except "none"
+  FACTIONS.filter(f => f.id !== "none").forEach(f => {
+    const fid = f.id;
+    if (!state.factions[fid]) state.factions[fid] = {};
+    const fs = state.factions[fid];
+    if (typeof fs.level !== "number") fs.level = 1;
+    if (typeof fs.power !== "number") fs.power = 10;
+    if (typeof fs.territory !== "number") fs.territory = 1;
+    if (typeof fs.resources !== "number") fs.resources = 10;
+  });
+}
+
+/*
+ * Update factions once per year. This function is called from ageUp().
+ * Factions gain levels, power, territory, and resources over time. The
+ * player’s reputation with their faction improves slightly when their
+ * faction levels up. Growth events are logged for immersion.
+ */
+function updateFactions() {
+  if (!state || !state.factions) return;
+  for (const fid in state.factions) {
+    if (fid === "none") continue;
+    const fs = state.factions[fid];
+    const prevLevel = fs.level || 1;
+    const prevTerr = fs.territory || 1;
+    // Simple linear growth each year
+    fs.level = (fs.level || 1) + 1;
+    // Power grows modestly with random factor
+    fs.power = (fs.power || 10) + rnd(1, 2);
+    // Resources accumulate over time
+    fs.resources = (fs.resources || 10) + rnd(2, 4);
+    // Territory may expand (30%) or contract (10%); remains at least 1
+    const roll = rnd(1, 100);
+    if (roll <= 30) {
+      fs.territory = (fs.territory || 1) + 1;
+    } else if (roll <= 40) {
+      fs.territory = Math.max(1, (fs.territory || 1) - 1);
+    }
+    // If the player's current faction levels up, bump their rep slightly
+    if (state.faction === fid && fs.level > prevLevel) {
+      state.factionRep = clamp((state.factionRep || 0) + 2, -100, 100);
+    }
+    // Log major changes
+    const name = (FACTIONS.find(f => f.id === fid) || {}).name || fid;
+    if (fs.level > prevLevel) {
+      log(`${name} grows in influence. Level ${fs.level}.`, "muted");
+    }
+    if (fs.territory > prevTerr) {
+      log(`${name} expands its territory. Total areas: ${fs.territory}.`, "muted");
+    } else if (fs.territory < prevTerr) {
+      log(`${name} loses some ground. Territory shrinks to ${fs.territory}.`, "muted");
+    }
+    // Warn when Dust Marauders become particularly strong
+    if (fid === "dust_marauders" && fs.power >= 30 && fs.power > (fs._warnedPower || 0)) {
+      log("The Dust Marauders grow emboldened. You sense more raider bands in the wastes.", "muted");
+      fs._warnedPower = fs.power;
+    }
+  }
+}
+
+/*
+ * Compute available actions for a faction based on its current level.
+ * Combines the base FACTION_ACTIONS with extra actions unlocked at
+ * certain levels as defined in FACTION_EXTRA_ACTIONS.
+ */
+function getFactionActions(fid) {
+  const base = (FACTION_ACTIONS[fid] || []).slice();
+  const extras = FACTION_EXTRA_ACTIONS[fid] || [];
+  const fs = state?.factions?.[fid];
+  const lvl = fs?.level || 1;
+  extras.forEach(x => {
+    if (lvl >= x.level) base.push(x.action);
+  });
+  return base;
+}
+
 
 // ── Faction Ranks ───────────────────────────────
 const FACTION_RANKS = [
@@ -1730,6 +2265,8 @@ function ageUp(){
 
   yearlyEvent();
   gainXP(10);
+  // Factions evolve over the course of a year
+  updateFactions();
   tickBuffs("action");
 }
 
@@ -1912,8 +2449,11 @@ function work(){
     console.error("Error inside job branch:", err, job);
   }
 
-  // Small chance to find scrap
-  if (rnd(1,100) > 95){ addItem("junk", 1); log("On your break, you salvage some scrap. +1 junk."); }
+  // Small chance to find scrap (adds to settlement)
+  if (rnd(1,100) > 95){
+    if (state.settlement) state.settlement.scrap = (state.settlement.scrap || 0) + 1;
+    log("On your break, you salvage some scrap. +1 scrap.");
+  }
 
   tickBuffs("action");
   updateUI();
@@ -2162,8 +2702,17 @@ function openJoinFaction(){
   rankRow.append(el("div","small muted", factionRank(state.factionRep)));
   m.content.append(rankRow, el("div","hr"));
 
-  // ── Actions
-  const actions = FACTION_ACTIONS[state.faction] || [];
+  // Display faction growth status (level, territory, power)
+  const fsInfo = state.factions && state.factions[state.faction];
+  if (fsInfo) {
+    const statRow = el("div","kv");
+    statRow.append(el("div", null, "Status"));
+    statRow.append(el("div","small muted", `Level ${fsInfo.level || 1}, Territory ${fsInfo.territory || 1}, Power ${fsInfo.power || 10}`));
+    m.content.append(statRow, el("div","hr"));
+  }
+
+  // ── Actions (base + extra unlocked by faction growth)
+  const actions = getFactionActions(state.faction);
   if (!actions.length) {
     m.content.append(el("p","muted","No special actions available right now."));
   } else {
@@ -2596,6 +3145,11 @@ function load(){
 
     // migrate any old inventory formats
     migrateInventoryShape();
+
+    // backfill faction growth state on load
+    initFactionState();
+    // backfill settlement/base state on load
+    if (typeof initSettlement === "function") initSettlement();
 
     info("Save loaded.");
     updateUI();
@@ -3125,163 +3679,8 @@ function section(titleText){
   window.updateUI = function(){ _update && _update(); ensureMapBtn(); };
 
   window.WL_TextMap = { world:WORLD, towns:TOWNS, openWorld, travelTo };
-})();
-</script>
-<style>
-  /* --- End-of-Battle Overlay — themed to Wastelife globals --- */
-  /* Uses your existing :root vars:
-     --bg --panel --accent --accent-dim --danger --warn --ok --text --muted --shadow --radius --mono --sans */
-
-  /* Overlay + centering (hardened) */
-  #wl-combat-end{
-    position:fixed!important; inset:0!important;
-    display:none; align-items:center; justify-content:center;
-    z-index:2147483647!important;
-    background:rgba(0,0,0,.6); /* match .modal-backdrop */
-    font-family:var(--sans); color:var(--text);
-  }
-  #wl-combat-end.wl-show{ display:flex!important }
-  #wl-combat-end *{ box-sizing:border-box }
-
-  /* Modal — larger */
-  #wl-combat-end .wl-modal{
-    display:block!important;
-    width:min(900px,98vw)!important; max-width:98vw; min-height:420px!important;
-    background:var(--panel)!important;
-    border:1px solid rgba(227,143,43,.28)!important; /* accent border */
-    border-radius:var(--radius)!important;
-    box-shadow:var(--shadow)!important;
-    color:var(--text);
-    overflow:hidden;
-  }
-
-  /* Header */
-  #wl-combat-end .wl-hdr{
-    padding:16px 18px!important;
-    border-bottom:1px solid rgba(227,143,43,.28)!important;
-    background:linear-gradient(180deg, rgba(26,21,18,1), rgba(26,21,18,.86))!important;
-    display:flex!important; gap:12px; align-items:center;
-  }
-  #wl-combat-end .wl-icon{
-    width:44px; height:44px; border-radius:12px;
-    display:grid; place-items:center; font-weight:800;
-    background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
-    border:1px solid rgba(227,143,43,.28);
-    color:var(--accent);
-    font-family:var(--mono);
-    text-shadow:0 1px 0 rgba(0,0,0,.35);
-  }
-  #wl-combat-end .wl-ttl{
-    margin:0; font-size:20px;
-    font-family:var(--mono);
-    color:var(--accent);
-    letter-spacing:.5px;
-    text-shadow:0 1px 0 rgba(0,0,0,.35);
-  }
-  #wl-combat-end .wl-sub{ margin:4px 0 0; color:var(--muted); font-size:13px }
-
-  /* Body */
-  #wl-combat-end .wl-body{ padding:22px 22px 8px!important }
-  #wl-combat-end .wl-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px }
-
-  /* Cards */
-  #wl-combat-end .wl-card{
-    background:linear-gradient(180deg, rgba(227,143,43,.06), rgba(0,0,0,.08));
-    border:1px solid rgba(227,143,43,.28);
-    border-radius:var(--radius);
-    padding:14px;
-  }
-  #wl-combat-end .wl-card h4{
-    margin:0 0 6px; font-size:12px; color:var(--muted); font-family:var(--mono)
-  }
-  #wl-combat-end .wl-big{ font-size:32px; font-weight:900; color:var(--text) }
-  #wl-combat-end .wl-badge{
-    padding:3px 8px; font-size:11px; border-radius:999px;
-    background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
-    border:1px solid rgba(227,143,43,.28);
-    color:var(--muted);
-    font-family:var(--mono);
-  }
-
-  /* Loot chips */
-  #wl-combat-end .wl-loot{ display:flex; gap:8px; flex-wrap:wrap }
-  #wl-combat-end .wl-loot .wl-chip{
-    font-size:12px; padding:6px 10px; border-radius:999px;
-    background:linear-gradient(180deg, rgba(227,143,43,.08), rgba(0,0,0,.25));
-    border:1px solid rgba(227,143,43,.35);
-    color:var(--text);
-    font-family:var(--mono);
-  }
-  #wl-combat-end .wl-note{ margin-top:10px; font-size:12px; color:var(--muted) }
-
-  /* Actions (match .actions/.choice look) */
-  #wl-combat-end .wl-actions{
-    display:flex!important; justify-content:flex-end; gap:10px;
-    padding:16px 22px 22px;
-  }
-  #wl-combat-end .wl-btn{
-    all:unset; cursor:pointer; padding:10px 14px; border-radius:10px;
-    border:1px solid rgba(227,143,43,.35);
-    background:linear-gradient(180deg, rgba(227,143,43,.10), rgba(0,0,0,.25));
-    color:var(--text);
-    font-family:var(--mono);
-  }
-  #wl-combat-end .wl-btn:hover{ border-color:var(--accent) }
-  #wl-combat-end .wl-btn.wl-primary{
-    background:linear-gradient(180deg, rgba(227,143,43,.14), rgba(0,0,0,.28));
-    border-color:rgba(227,143,43,.45);
-  }
-
-  /* Outcome icon tints */
-  #wl-combat-end.wl-win .wl-icon{
-    color:var(--ok);
-    box-shadow: inset 0 0 0 1px rgba(121,179,123,.35);
-  }
-  #wl-combat-end.wl-lose .wl-icon{
-    color:var(--danger);
-    box-shadow: inset 0 0 0 1px rgba(198,69,58,.35);
-  }
-  #wl-combat-end.wl-flee .wl-icon{
-    color:var(--warn);
-    box-shadow: inset 0 0 0 1px rgba(242,193,78,.35);
-  }
-
-  @media(max-width:560px){
-    #wl-combat-end .wl-grid{ grid-template-columns:1fr }
-  }
-</style>
-
-<div id="wl-combat-end" class="wl-overlay" role="dialog" aria-modal="true" aria-labelledby="wl-title" aria-describedby="wl-desc">
-  <div class="wl-modal" role="document">
-    <div class="wl-hdr">
-      <div class="wl-icon" id="wl-icon">★</div>
-      <div>
-        <h2 id="wl-title" class="wl-ttl">Battle Result</h2>
-        <div id="wl-desc" class="wl-sub">You win!</div>
-      </div>
-    </div>
-    <div class="wl-body">
-      <div class="wl-grid">
-        <div class="wl-card">
-          <h4>Rewards</h4>
-          <div class="wl-big"><span id="wl-xp">+0</span> <span class="wl-badge">XP</span></div>
-          <div class="wl-sub">Caps: <b id="wl-caps">0</b></div>
-        </div>
-        <div class="wl-card">
-          <h4>Loot</h4>
-          <div id="wl-loot" class="wl-loot"><span class="wl-sub">None</span></div>
-        </div>
-      </div>
-      <div id="wl-note" class="wl-note"></div>
-    </div>
-    <div class="wl-actions">
-      <button id="wl-close" class="wl-btn">Close</button>
-      <button id="wl-again" class="wl-btn wl-primary">Continue</button>
-    </div>
-  </div>
-</div>
-
-<script>
+})();</script>
+<script>// end_screen_helper.js
 /* ---- end-screen helper ---- */
 (function(){
   const $=id=>document.getElementById(id);
@@ -3653,22 +4052,84 @@ function section(titleText){
     if (!npc) return showModalSimple("NPC not found","");
 
     const near = (npc.locId === hereId());
-    let html = `
-      <p><b>${npc.name}</b> (${npc.role})<br>
+    let html = ``;
+    // Basic information
+    html += `<p><b>${npc.name}</b> (${npc.role})<br>
       Location: ${LOC.name(npc.locId)}${near ? " (nearby)" : ""}<br>
-      Trust: ${npc.trust ?? 0}</p>`;
-
+      Trust: ${npc.trust ?? 0}`;
+    // Show respect and affection if available
+    if (typeof npc.respect === "number") html += `, Respect: ${npc.respect}`;
+    if (typeof npc.affection === "number") html += `, Affection: ${npc.affection}`;
+    html += `</p>`;
+    // Show personality traits
+    if (npc.personality) {
+      const { attitude, morality, pragmatism } = npc.personality;
+      html += `<p><b>Personality:</b> ${attitude || ''}, ${morality || ''}, ${pragmatism || ''}</p>`;
+    }
+    // Show goals
+    if (npc.goals) {
+      const sg = npc.goals.short;
+      const lg = npc.goals.long;
+      if (sg) {
+        let sgDesc;
+        switch (sg.type) {
+          case "raid": sgDesc = `raid ${LOC.name(sg.target)}`; break;
+          case "trade": sgDesc = `trade with ${LOC.name(sg.target)}`; break;
+          case "research": sgDesc = `study tech at ${LOC.name(sg.target)}`; break;
+          case "explore": sgDesc = `explore the area around ${LOC.name(sg.target)}`; break;
+          case "patrol": sgDesc = `patrol near ${LOC.name(sg.target)}`; break;
+          case "recruit": sgDesc = `recruit in ${LOC.name(sg.target)}`; break;
+          default: sgDesc = `${sg.type} at ${LOC.name(sg.target)}`;
+        }
+        html += `<p><b>Current Mission:</b> ${sgDesc}</p>`;
+      }
+      if (lg) {
+        html += `<p><b>Long-Term Goal:</b> ${lg.desc || lg.type}</p>`;
+      }
+    }
+    // Show mood/state indicators
+    if (typeof npc.morale === "number" || typeof npc.health === "number" || typeof npc.wealth === "number" || typeof npc.stress === "number") {
+      const parts = [];
+      if (typeof npc.morale === "number") parts.push(`Morale: ${npc.morale}`);
+      if (typeof npc.health === "number") parts.push(`Health: ${npc.health}`);
+      if (typeof npc.wealth === "number") parts.push(`Wealth: ${npc.wealth}`);
+      if (typeof npc.stress === "number") parts.push(`Stress: ${npc.stress}`);
+      html += `<p><b>Mood:</b> ${parts.join(', ')}</p>`;
+    }
+    // Show relationships
+    if (npc.relationships && Object.keys(npc.relationships).length) {
+      const lines = [];
+      for (const rid in npc.relationships) {
+        const other = S.npcs.find(x => x.id === rid);
+        if (!other) continue;
+        const relation = npc.relationships[rid];
+        lines.push(`${relation === 'ally' ? 'Ally' : 'Rival'}: ${other.name}`);
+      }
+      if (lines.length) html += `<p><b>Connections:</b> ${lines.join('; ')}</p>`;
+    }
+    // Buttons
     if (!near){
       html += `<button class="choice" onclick="(function(){ LW.travelToId('${npc.locId}'); LW.openNPC('${npc.id}'); })()">Travel to ${LOC.name(npc.locId)}</button>`;
     } else {
+      // Chat and rumors always available nearby
       html += `
         <button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>
         <button class="choice" onclick="LW.talk('${npc.id}','rumor')">Ask for Rumors</button>`;
-      if (npc.role === "Trader") html += `<button class="choice" onclick="LW.talk('${npc.id}','trade')">Trade</button>`;
-      if (npc.role === "Merc")   html += `<button class="choice" onclick="LW.talk('${npc.id}','hire')">Hire as Guard</button>`;
-      if (npc.role === "Scribe") html += `
+      // Role-specific actions (case-insensitive)
+      const role = (npc.role||"").toLowerCase();
+      if (/trader/.test(role)) html += `<button class="choice" onclick="LW.talk('${npc.id}','trade')">Trade</button>`;
+      if (/merc|guard|scout|hunter|raider/.test(role)) {
+        html += `<button class="choice" onclick="(function(){ if (LW.recruit) LW.recruit('${npc.id}'); })()">Recruit</button>`;
+      }
+      // Ask for work if tasks exist for this NPC (leveraging generic tasks)
+      if (LW.askForWork) {
+        html += `<button class="choice" onclick="LW.askForWork('${npc.id}')">Ask for Work</button>`;
+      }
+      if (/scribe|scientist|tech/.test(role)) {
+        html += `
         <button class="choice" onclick="LW.talk('${npc.id}','lore')">Share Knowledge</button>
         <button class="choice" onclick="LW.talk('${npc.id}','request')">Request Research</button>`;
+      }
     }
     showModalSimple(npc.name, html);
   }
@@ -3682,24 +4143,111 @@ function section(titleText){
     if (!near && action!=="rumor"){ showModalSimple(npc.name, `<p>${npc.name} is at ${LOC.name(npc.locId)}. Travel there first.</p>`); return; }
 
     switch(action){
-      case "trade":
+      case "trade": {
         out = `${npc.name} lays out wares. (Hook: open trader UI)`;
-        try{ W.openTrade?.("Trader"); }catch{}
-        trust = 1; break;
-      case "rumor":
-        out = `${npc.name} shares rumors about faction movements.`; trust = 2; break;
-      case "hire": {
-        const cost = 15;
-        if ((s.caps||0) >= cost){ s.caps -= cost; out = `${npc.name} agrees to guard you for a while. (Companion stub)`; trust = 3; W.updateUI?.(); }
-        else out = `${npc.name}: "Come back with ${cost} caps."`;
+        try{ if (W.openTrade) W.openTrade("Trader"); }catch{}
+        trust = 1;
         break;
       }
-      case "lore":
-        out = `${npc.name} teaches you pre-war tech insights. (+10 XP)`; W.gainXP?.(10); trust = 2; break;
-      case "request":
-        out = `${npc.name}: "Bring me a Holotape and I'll share a schematic."`; trust = 1; break;
-      default:
-        out = `${npc.name} chats about the road.`; trust = 1;
+      case "rumor": {
+        // Generate a situational rumor. Could involve factions, raids, or gossip about rivals.
+        const rumorLines = [];
+        // Include gossip about relationships
+        if (npc.relationships && Object.keys(npc.relationships).length) {
+          const relId = Object.keys(npc.relationships)[Math.floor(Math.random()*Object.keys(npc.relationships).length)];
+          const other = S.npcs.find(n => n.id === relId);
+          if (other) {
+            if (npc.relationships[relId] === 'ally') rumorLines.push(`"${other.name} is making waves lately. Keep an eye on them."`);
+            if (npc.relationships[relId] === 'rival') rumorLines.push(`"I hear ${other.name} is scheming against me."`);
+          }
+        }
+        // Faction rumor
+        if (Array.isArray(W.FACTIONS) && W.FACTIONS.length) {
+          const faction = W.FACTIONS[Math.floor(Math.random()*W.FACTIONS.length)];
+          rumorLines.push(`"Word is the ${faction.name} are up to something."`);
+        }
+        // Location-based rumor
+        if (Array.isArray(W.PROC_LOCATIONS) && W.PROC_LOCATIONS.length) {
+          const loc = W.PROC_LOCATIONS[Math.floor(Math.random()*W.PROC_LOCATIONS.length)];
+          rumorLines.push(`"There's talk of treasure buried near ${LOC.name(loc)}."`);
+        }
+        out = `${npc.name} whispers: ${rumorLines[Math.floor(Math.random()*rumorLines.length)] || '"Nothing much to report right now."'}`;
+        trust = 2;
+        break;
+      }
+      case "hire": {
+        const cost = 15;
+        if ((s.caps||0) >= cost){
+          s.caps -= cost;
+          out = `${npc.name} agrees to guard you for a while. (Companion stub)`;
+          trust = 3;
+          if (W.updateUI) W.updateUI();
+        } else {
+          out = `${npc.name}: "Come back with ${cost} caps."`;
+        }
+        break;
+      }
+      case "lore": {
+        out = `${npc.name} teaches you pre-war tech insights. (+10 XP)`;
+        if (W.gainXP) W.gainXP(10);
+        trust = 2;
+        break;
+      }
+      case "request": {
+        out = `${npc.name}: "Bring me a Holotape and I'll share a schematic."`;
+        trust = 1;
+        break;
+      }
+      default: {
+        // Dynamic chat: reference NPC mood, goals, relationships, personality
+        const lines = [];
+        // Mood-based lines
+        if (npc.health < 40) lines.push(`"I'm nursing some wounds from our last encounter."`);
+        if (npc.morale < 40) lines.push(`"Our spirits are low. Hard times have taken their toll."`);
+        if (npc.morale > 70) lines.push(`"We feel unstoppable after recent successes."`);
+        if (npc.wealth > 70) lines.push(`"We're flush with loot after our recent haul."`);
+        if (npc.stress > 60) lines.push(`"Tension is high — I can sense the pressure on my crew."`);
+        // Goal-based lines
+        if (npc.goals && npc.goals.short) {
+          const sg = npc.goals.short;
+          if (sg.type === 'raid') lines.push(`"We're gearing up to raid ${LOC.name(sg.target)} soon."`);
+          if (sg.type === 'trade') lines.push(`"I'm planning a trade run to ${LOC.name(sg.target)}."`);
+          if (sg.type === 'research') lines.push(`"There are secrets to uncover at ${LOC.name(sg.target)}."`);
+          if (sg.type === 'explore') lines.push(`"I'm itching to explore around ${LOC.name(sg.target)}."`);
+          if (sg.type === 'patrol') lines.push(`"I'm due to patrol near ${LOC.name(sg.target)}."`);
+          if (sg.type === 'recruit') lines.push(`"I've got to recruit more hands in ${LOC.name(sg.target)}."`);
+        }
+        // Long-term goal line
+        if (npc.goals && npc.goals.long && Math.random() < 0.5) {
+          lines.push(`"Someday I'll ${npc.goals.long.desc || npc.goals.long.type}."`);
+        }
+        // Relationship-based lines
+        if (npc.relationships && Object.keys(npc.relationships).length && Math.random() < 0.5) {
+          const keys = Object.keys(npc.relationships);
+          const rid = keys[Math.floor(Math.random()*keys.length)];
+          const rel = npc.relationships[rid];
+          const other = S.npcs.find(x=>x.id===rid);
+          if (other) {
+            if (rel === 'ally') lines.push(`"My ally ${other.name} has my back."`);
+            if (rel === 'rival') lines.push(`"I can't stand ${other.name}; they'll get what's coming to them."`);
+          }
+        }
+        // Personality-based lines
+        if (npc.personality && Math.random() < 0.5) {
+          const { attitude, morality, pragmatism } = npc.personality;
+          lines.push(`"I'm the ${attitude} type, some would say."`);
+          lines.push(`"I consider myself quite ${morality}."`);
+          lines.push(`"I take a ${pragmatism} view of things."`);
+        }
+        // Fallback line if nothing else
+        if (lines.length === 0) {
+          lines.push(`"The road never ends out here."`);
+        }
+        out = `${npc.name}: ${lines[Math.floor(Math.random()*lines.length)]}`;
+        // Increase trust slightly for taking time to chat
+        trust = 1;
+        break;
+      }
     }
 
     npc.trust = Math.min(100, (npc.trust||0) + trust);
@@ -3719,12 +4267,70 @@ function section(titleText){
   else patch();
 
   // Expose for onclicks
-  W.LW = { state:S, openSocial, openNPC, talk, travelToId };
-})();
-</script>
+  // Merge into existing LW object instead of overwriting it so that other add-ons
+  // (e.g. faction_npcs.js) can define additional helpers like openJobBoard and
+  // accept/complete NPC tasks.  Without this merge, setting LW here would
+  // discard any properties previously attached to LW by other scripts.
+  W.LW = Object.assign(W.LW || {}, { state:S, openSocial, openNPC, talk, travelToId });
 
-<!-- ============== Hard-wired Faction NPCs + Faction chips + Modal faction line ============== -->
-<script>
+  /**
+   * Ask a specific NPC for work. Displays tasks that can be accepted or completed.
+   */
+  LW.askForWork = function(npcId) {
+    const npc = (LW.state.npcs || []).find(n => n.id === npcId && n.alive);
+    if (!npc) return;
+    // Ensure tasks exist for this NPC
+    if (typeof LW.ensureNPCTasks === 'function') LW.ensureNPCTasks(npc);
+    const tasks = npc.tasks || [];
+    let content = '';
+    tasks.forEach(t => {
+      const status = npc.taskStatus && npc.taskStatus[t.id];
+      let line = `<b>${t.title}</b><br><span class="small">${t.desc}</span><br>`;
+      if (status === 'available') {
+        line += `<button class="choice" onclick="LW.acceptNPCTask('${npc.id}','${t.id}'); LW.askForWork('${npc.id}');">Accept</button>`;
+      } else if (status === 'accepted') {
+        // check if requirements met
+        const canComplete = (function(req){ if (!req) return true; const S = W.state || {}; if (req.items && Array.isArray(req.items)) { for (const it of req.items) { const count = (typeof W.countItem === 'function' ? W.countItem(it.id) : 0) || 0; if (count < (it.qty || 1)) return false; } } if (req.caps && (S.caps || 0) < req.caps) return false; return true; })(t.req);
+        if (canComplete) {
+          line += `<button class="choice" onclick="LW.completeNPCTask('${npc.id}','${t.id}'); LW.askForWork('${npc.id}');">Complete</button>`;
+        } else {
+          line += `<span class="muted">Missing items</span>`;
+        }
+      } else if (status === 'completed') {
+        line += `<span class="muted">Completed</span>`;
+      }
+      content += `<div style="margin-bottom:8px">${line}</div>`;
+    });
+    if (!content) content = '<p>(No tasks available)</p>';
+    showModalSimple(`Work for ${npc.name}`, content);
+  };
+
+  /**
+   * Attempt to recruit an NPC as a companion. Requires high trust.
+   */
+  LW.recruit = function(npcId) {
+    const npc = (LW.state.npcs || []).find(n => n.id === npcId && n.alive);
+    if (!npc) return;
+    const Sstate = W.state || {};
+    Sstate.companions = Sstate.companions || [];
+    if (Sstate.companions.find(c => c.id === npcId)) {
+      showModalSimple(npc.name, `<p>${npc.name} is already travelling with you.</p>`);
+      return;
+    }
+    const requiredTrust = 70;
+    if ((npc.trust || 0) < requiredTrust) {
+      showModalSimple(npc.name, `<p>${npc.name}: "We aren't that close. Earn my trust first."</p>`);
+      return;
+    }
+    // Add to companions
+    Sstate.companions.push({ id: npc.id, name: npc.name, role: npc.role });
+    showModalSimple(npc.name, `<p>${npc.name} agrees to accompany you. They may aid you in combat or other events.</p>`);
+    // Slight stat benefit: increase player's max HP or XP as a placeholder
+    if (typeof W.gainXP === 'function') W.gainXP(5);
+    if (typeof W.updateUI === 'function') W.updateUI();
+  };
+})();</script>
+<script>// faction_npcs.js
 (function(){
   if (window.__FACTION_NPCS_BLOCK__) return; window.__FACTION_NPCS_BLOCK__ = true;
 
@@ -3912,7 +4518,18 @@ function section(titleText){
 	/* Wastelife — NPC Factions + Stats + Growth (non-breaking add-on) */
 (function () {
   "use strict";
-  if (window.__WL_NPC_GROWTH__) return; window.__WL_NPC_GROWTH__ = true;
+  // Debug: verify this script executes by logging to the Life Log.  This
+  // message will appear once when the NPC growth/quest script runs.
+  try { (window.log||console.log)("[NPC] growth & quest module loaded"); } catch(_){ }
+  // Always set the growth flag but do not bail early.  In previous versions
+  // of Wastelife, __WL_NPC_GROWTH__ was set to prevent this script from
+  // executing more than once.  However, that caused our upgrades (tasks,
+  // job board) to be skipped entirely if the flag was already defined by
+  // another script.  To ensure the quest logic always runs, we remove the
+  // early return and simply mark the flag here.  If another script has
+  // already set this flag, it will be overwritten but still allow this
+  // block to execute.
+  window.__WL_NPC_GROWTH__ = true;
 
   const W  = window;
   const LW = W.LW || (W.LW = { state:{ npcs:[] } });
@@ -3930,6 +4547,174 @@ function section(titleText){
     ];
   const FNAME = fid => (FLIST.find(f=>f.id===fid)?.name) || (fid==="none" ? "Independent" : "Unknown");
 
+  /* -------- NPC Tasks & Quests -------- */
+  // Define tasks per NPC. Each task has an id, title, description, requirements and rewards.
+  // Requirements can include `items` (array of {id, qty}) and `caps`. Rewards can include
+  // `items`, `caps`, `xp`, and `trust`. Feel free to expand this list to add more
+  // engaging content. Players can accept one task at a time per NPC; once a task is
+  // completed it cannot be repeated. New tasks can be added in later updates.
+  const NPC_TASKS_DEF = {
+    pike: [
+      {
+        id: "pike_1",
+        title: "Restock Supplies",
+        desc: "Pike needs more materials for his caravans. Bring him 2× Junk and 1× Duct Tape.",
+        req: { items: [{id:"junk", qty:2}, {id:"duct_tape", qty:1}] },
+        reward: { caps: 30, xp: 10, trust: 5 }
+      },
+      {
+        id: "pike_2",
+        title: "Weapon Tune-Up",
+        desc: "Pike wants to upgrade his guards. Bring him 1 Revolver and 10 rounds of .38 Ammo.",
+        req: { items: [{id:"revolver", qty:1}, {id:"ammo_38", qty:10}] },
+        reward: { caps: 60, xp: 25, trust: 12 }
+      }
+    ],
+    mae: [
+      {
+        id: "mae_1",
+        title: "Medical Emergency",
+        desc: "Doc Mae needs medicine. Bring her 1 Rad Purge and 1 Duct Tape.",
+        req: { items: [{id:"rad_purge", qty:1}, {id:"duct_tape", qty:1}] },
+        reward: { caps: 50, xp: 20, trust: 10 }
+      },
+      {
+        id: "mae_2",
+        title: "Radiation Shield",
+        desc: "Mae wants extra Rad Shield for her field kit. Bring her 1 Rad Shield.",
+        req: { items: [{id:"rad_shield", qty:1}] },
+        reward: { caps: 20, xp: 10, trust: 6 }
+      }
+    ],
+    colt: [
+      {
+        id: "colt_1",
+        title: "Scout the Perimeter",
+        desc: "Ranger Colt is low on ammunition. Bring him 10 rounds of .308 Ammo.",
+        req: { items: [{id:"ammo_308", qty:10}] },
+        reward: { xp: 30, trust: 12, caps: 20 }
+      },
+      {
+        id: "colt_2",
+        title: "Sharpshooter Trial",
+        desc: "Prove your precision. Deliver 1 Hunting Rifle to Colt.",
+        req: { items: [{id:"hunting_rifle", qty:1}] },
+        reward: { xp: 35, trust: 14 }
+      }
+    ],
+    sal: [
+      {
+        id: "sal_1",
+        title: "Under-the-Table Deal",
+        desc: "Shady Sal wants some scrap to fence. Bring him 3 Junk.",
+        req: { items: [{id:"junk", qty:3}] },
+        reward: { caps: 80, xp: 25, trust: 10 }
+      }
+    ],
+    ishi: [
+      {
+        id: "ishi_1",
+        title: "Prototype Repair",
+        desc: "Tinker Ishi needs parts for his prototype. Bring him 3 Duct Tape and 5 Junk.",
+        req: { items: [{id:"duct_tape", qty:3}, {id:"junk", qty:5}] },
+        reward: { xp: 30, trust: 12, caps: 25 }
+      }
+    ],
+    lark: [
+      {
+        id: "lark_1",
+        title: "Tales of the Past",
+        desc: "Old Man Lark is looking for relics. Bring him 1 Ancient Holotape.",
+        req: { items: [{id:"holotape", qty:1}] },
+        reward: { xp: 20, trust: 10 }
+      }
+    ]
+  };
+
+  /* -------- Generic role-based tasks -------- */
+  // These tasks are assigned to procedural NPCs based on their role. They
+  // provide simple fetch quests so the player can interact with generated
+  // characters. When a procedural NPC with one of these roles is first
+  // encountered, ensureTasks will assign these tasks if no explicit task
+  // definition exists for the NPC ID.
+  const GENERIC_ROLE_TASKS = {
+    Trader: [
+      {
+        id: "gen_trader_1",
+        title: "Restock Goods",
+        desc: "This trader needs more materials for their caravan. Bring them 2× Junk and 1× Duct Tape.",
+        req: { items: [{id:"junk", qty:2}, {id:"duct_tape", qty:1}] },
+        reward: { caps: 30, xp: 10, trust: 5 }
+      },
+      {
+        id: "gen_trader_2",
+        title: "Special Order",
+        desc: "Deliver 1 Revolver and 10 rounds of .38 Ammo to fill a special request.",
+        req: { items: [{id:"revolver", qty:1}, {id:"ammo_38", qty:10}] },
+        reward: { caps: 60, xp: 25, trust: 10 }
+      }
+    ],
+    Raider: [
+      {
+        id: "gen_raider_1",
+        title: "Arms Deal",
+        desc: "This raider wants extra firepower. Bring them 5× .308 Ammo.",
+        req: { items: [{id:"ammo_308", qty:5}] },
+        reward: { xp: 20, trust: 8, caps: 20 }
+      },
+      {
+        id: "gen_raider_2",
+        title: "Salvage Raid",
+        desc: "Deliver 1 Hunting Rifle to bolster their crew.",
+        req: { items: [{id:"hunting_rifle", qty:1}] },
+        reward: { xp: 35, trust: 12 }
+      }
+    ],
+    Scientist: [
+      {
+        id: "gen_scientist_1",
+        title: "Research Materials",
+        desc: "This scientist needs chemicals. Bring 1 Rad Purge and 1 Duct Tape.",
+        req: { items: [{id:"rad_purge", qty:1}, {id:"duct_tape", qty:1}] },
+        reward: { xp: 25, trust: 8, caps: 20 }
+      },
+      {
+        id: "gen_scientist_2",
+        title: "Shield Upgrade",
+        desc: "Deliver 1 Rad Shield for protective experiments.",
+        req: { items: [{id:"rad_shield", qty:1}] },
+        reward: { xp: 12, trust: 6, caps: 15 }
+      }
+    ],
+    Wanderer: [
+      {
+        id: "gen_wanderer_1",
+        title: "Stories for the Road",
+        desc: "Find and bring 1 Holotape full of old world tales.",
+        req: { items: [{id:"holotape", qty:1}] },
+        reward: { xp: 20, trust: 10 }
+      }
+    ]
+  };
+
+  // Ensure an NPC has tasks initialized and a status tracker. Called in assure() and when opening NPC.
+  function ensureTasks(npc) {
+    if (!npc) return;
+    if (!npc.tasks) {
+      // Use explicit tasks if defined for the NPC ID. Otherwise fall back
+      // to generic tasks based on the NPC's role. This allows procedural
+      // NPCs to provide simple quests without hard coding every id.
+      const explicit = NPC_TASKS_DEF[npc.id] || [];
+      const generic = GENERIC_ROLE_TASKS[npc.role] || [];
+      const defs = explicit.length ? explicit : generic;
+      npc.tasks = defs.map(t => JSON.parse(JSON.stringify(t)));
+    }
+    if (!npc.taskStatus) {
+      npc.taskStatus = {};
+      (npc.tasks || []).forEach(t => { npc.taskStatus[t.id] = "available"; });
+    }
+  }
+
   /* -------- Ensure every NPC has stats/faction -------- */
   function defaultStats() {
     return { STR:3, PER:3, END:3, CHA:3, INT:3, AGI:3, LCK:3, HP:20, curHP:20 };
@@ -3945,6 +4730,9 @@ function section(titleText){
     npc.stats      = npc.stats || defaultStats();
     npc.maxHP      = npc.maxHP || (() => 15 + npc.stats.END*3 + npc.level*2);
     npc.stats.curHP = Math.min(npc.stats.curHP || npc.maxHP(), npc.maxHP());
+
+    // Ensure tasks & task statuses exist
+    ensureTasks(npc);
     return npc;
   }
   (LW.state.npcs||[]).forEach(assure);
@@ -4031,19 +4819,47 @@ function section(titleText){
         </div>
     `;
 
+    // Travel button if far away
     if (!isNearby) {
       html += `<button class="choice" onclick="(function(){ LW.travelToId('${npc.locId}'); LW.openNPC('${npc.id}'); })()">Travel to ${npc.locName || ""}</button>`;
-    } else {
-      // keep your existing actions
-      html += `<div class="btns">
-        <button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>
-        <button class="choice" onclick="LW.talk('${npc.id}','rumor')">Ask for Rumors</button>
-        ${npc.role==="Trader" ? `<button class="choice" onclick="LW.talk('${npc.id}','trade')">Trade</button>` : ""}
-        ${npc.role==="Merc"   ? `<button class="choice" onclick="LW.talk('${npc.id}','hire')">Hire as Guard</button>` : ""}
-        ${npc.role==="Scribe" ? `
-          <button class="choice" onclick="LW.talk('${npc.id}','lore')">Share Knowledge</button>
-          <button class="choice" onclick="LW.talk('${npc.id}','request')">Request Research</button>` : ""}
-      </div>`;
+    }
+    // Always show action buttons when near (or allow chat & rumor when far)
+    html += `<div class="btns">
+      <button class="choice" onclick="LW.talk('${npc.id}','chat')">Chat</button>
+      <button class="choice" onclick="LW.talk('${npc.id}','rumor')">Ask for Rumors</button>
+      ${npc.role==="Trader" ? `<button class="choice" onclick="LW.talk('${npc.id}','trade')">Trade</button>` : ""}
+      ${npc.role==="Merc"   ? `<button class="choice" onclick="LW.talk('${npc.id}','hire')">Hire as Guard</button>` : ""}
+      ${npc.role==="Scribe" ? `
+        <button class="choice" onclick="LW.talk('${npc.id}','lore')">Share Knowledge</button>
+        <button class="choice" onclick="LW.talk('${npc.id}','request')">Request Research</button>` : ""}
+    </div>`;
+
+    // Inject tasks panel if any tasks exist
+    ensureTasks(npc);
+    if (npc.tasks && npc.tasks.length) {
+      html += `<div class="tasks" style="margin-top:12px;">
+        <div class="small" style="margin-bottom:4px;"><b>Tasks</b></div>`;
+      for (const t of npc.tasks) {
+        const status = npc.taskStatus && npc.taskStatus[t.id];
+        let actionHtml = "";
+        if (status === "available") {
+          actionHtml = isNearby ? `<button class="choice" onclick="LW.acceptNPCTask('${npc.id}','${t.id}')">Accept</button>` : `<span class="muted">Travel to accept</span>`;
+        } else if (status === "accepted") {
+          // Determine if requirements are met
+          const canComplete = isNearby && meetsRequirements(t.req);
+          actionHtml = isNearby ? (canComplete ? `<button class="choice" onclick="LW.completeNPCTask('${npc.id}','${t.id}')">Complete</button>` : `<span class="muted">Missing items</span>`) : `<span class="muted">Travel to complete</span>`;
+        } else if (status === "completed") {
+          actionHtml = `<span class="muted">Completed</span>`;
+        } else {
+          actionHtml = `<span class="muted">Unknown</span>`;
+        }
+        html += `<div class="task" style="margin-bottom:8px; border:1px solid #3a3124; padding:6px 8px; border-radius:6px;">
+          <div><b>${t.title}</b></div>
+          <div class="small" style="margin:4px 0;">${t.desc}</div>
+          <div>${actionHtml}</div>
+        </div>`;
+      }
+      html += `</div>`;
     }
     html += `</div>`;
     return html;
@@ -4095,15 +4911,1881 @@ function section(titleText){
   });
   mo.observe(document.documentElement, { childList:true, subtree:true });
 
+  /* -------- Task interactions -------- */
+  // Accept a task from an NPC. Changes status from "available" to "accepted" and logs the task description.
+  LW.acceptNPCTask = function(npcId, taskId) {
+    const npc = (LW.state.npcs||[]).find(n=>n.id===npcId);
+    if (!npc) return;
+    ensureTasks(npc);
+    const status = npc.taskStatus && npc.taskStatus[taskId];
+    if (status !== "available") return;
+    npc.taskStatus[taskId] = "accepted";
+    const task = (npc.tasks||[]).find(t=>t.id===taskId);
+    if (task) {
+      (window.log||console.log)(`${npc.name} gave you a task: ${task.title}. ${task.desc}`);
+    }
+    (window.updateUI||function(){})();
+  };
+
+  // Helper to check if requirements are met. Supports items, caps, explores, kills, flawlessKill and chats counters.
+  function meetsRequirements(req) {
+    if (!req) return true;
+    const S = window.state;
+    // Items requirement
+    if (req.items && Array.isArray(req.items)) {
+      for (const it of req.items) {
+        const count = (window.countItem ? window.countItem(it.id) : 0) || 0;
+        if (count < (it.qty||1)) return false;
+      }
+    }
+    // Caps requirement
+    if (req.caps && (S.caps||0) < req.caps) return false;
+    // Kills/explores/flawlessKill/chats are tracked via LW.taskProgress per run; if not found, assume not met
+    const tp = S.taskProgress || {};
+    if (req.kills && (tp.kills||0) < req.kills) return false;
+    if (req.explores && (tp.explores||0) < req.explores) return false;
+    if (req.flawlessKill && !tp.flawlessKill) return false;
+    if (req.chats && (tp.chats||0) < req.chats) return false;
+    return true;
+  }
+
+  // Consume requirements: remove items and caps, but leave progress counters.
+  function consumeRequirements(req) {
+    const S = window.state;
+    if (!req) return;
+    if (req.items && Array.isArray(req.items) && window.removeItem) {
+      for (const it of req.items) {
+        for (let i=0; i< (it.qty||1); i++) window.removeItem(it.id);
+      }
+    }
+    if (req.caps) {
+      S.caps = (S.caps||0) - req.caps;
+    }
+  }
+
+  // Grant rewards: add items, caps, xp, trust to npc
+  function grantRewards(npc, reward) {
+    const S = window.state;
+    if (!reward) return;
+    if (reward.items && Array.isArray(reward.items) && window.addItem) {
+      for (const it of reward.items) {
+        for (let i=0; i < (it.qty||1); i++) window.addItem(it.id);
+      }
+    }
+    if (reward.caps) {
+      S.caps = (S.caps||0) + reward.caps;
+    }
+    if (reward.xp && window.gainXP) {
+      window.gainXP(reward.xp);
+    } else if (reward.xp) {
+      S.xp = (S.xp||0) + reward.xp;
+    }
+    if (reward.trust) {
+      npc.trust = Math.min(100, (npc.trust||50) + reward.trust);
+    }
+  }
+
+  // Complete a task. Checks requirements, consumes resources, grants rewards, and sets status to completed.
+  LW.completeNPCTask = function(npcId, taskId) {
+    const npc = (LW.state.npcs||[]).find(n=>n.id===npcId);
+    if (!npc) return;
+    ensureTasks(npc);
+    const status = npc.taskStatus && npc.taskStatus[taskId];
+    if (status !== "accepted") return;
+    const task = (npc.tasks||[]).find(t=>t.id===taskId);
+    if (!task) return;
+    // Check requirements
+    if (!meetsRequirements(task.req)) {
+      (window.log||console.log)(`You do not meet the requirements for ${task.title}.`);
+      return;
+    }
+    // Consume
+    consumeRequirements(task.req);
+    // Grant rewards
+    grantRewards(npc, task.reward);
+    // Mark completed
+    npc.taskStatus[taskId] = "completed";
+    (window.log||console.log)(`Task completed: ${task.title}.`);
+    (window.updateUI||function(){})();
+  };
+
+
   // expose manual refresh if you want to call it
   W.WL_NPC_GROWTH.refresh = function(){
     // reopen last opened modal by calling LW.openNPC again with the same id is app-specific; skipping
   };
-})();
 
-</script>
+  /* -------- Job Board -------- */
+  // Opens a modal listing all NPC tasks regardless of location. Lets the player accept or complete tasks
+  LW.openJobBoard = function(){
+    const npcs = (LW.state.npcs||[]).map(assure);
+    let html = '';
+    npcs.forEach(npc => {
+      ensureTasks(npc);
+      if (!npc.tasks || npc.tasks.length === 0) return;
+      html += `<div style="margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <div><b>${npc.name}</b> (${npc.role}) — <span class="muted">${FNAME(npc.factionId)}</span></div>`;
+      npc.tasks.forEach(t => {
+        const status = npc.taskStatus && npc.taskStatus[t.id];
+        let actionHtml = '';
+        if (status === 'available') {
+          actionHtml = `<button class="choice" onclick="LW.acceptNPCTask('${npc.id}','${t.id}'); LW.openJobBoard();">Accept</button>`;
+        } else if (status === 'accepted') {
+          const canComplete = meetsRequirements(t.req);
+          actionHtml = canComplete ? `<button class="choice" onclick="LW.completeNPCTask('${npc.id}','${t.id}'); LW.openJobBoard();">Complete</button>` : `<span class="muted">Missing items</span>`;
+        } else if (status === 'completed') {
+          actionHtml = `<span class="muted">Completed</span>`;
+        } else {
+          actionHtml = `<span class="muted">Unknown</span>`;
+        }
+        html += `<div style="margin-left:12px;margin-top:4px">
+          <b>${t.title}</b><br>
+          <span class="small muted">${t.desc}</span><br>
+          ${actionHtml}
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    if (!html) html = '<p>(No tasks available)</p>';
+    // Use the shared modal system to display the job board.  Prefer the
+    // global openModal helper from main.js if available; this returns an
+    // object with a .content property where we can inject our HTML.
+    if (typeof openModal === 'function') {
+      const mdl = openModal('Job Board');
+      if (mdl && mdl.content) mdl.content.innerHTML = html;
+    } else if (typeof showModalSimple === 'function') {
+      // Fallback for older versions: use showModalSimple if defined
+      showModalSimple('Job Board', html);
+    } else {
+      // Last resort: log to console
+      (window.log||console.log)('Job Board:\n'+html);
+    }
+  };
+  // Attach handler to button after DOM load
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-jobboard');
+    if (btn) btn.addEventListener('click', () => { LW.openJobBoard(); });
+  }); else {
+    const btn = document.getElementById('btn-jobboard');
+    if (btn) btn.addEventListener('click', () => { LW.openJobBoard(); });
+  }
+})();</script>
+<script>// npc_tasks.js
+/* Wastelife — NPC Tasks & Job Board
+ *
+ * This add-on defines optional tasks for each faction NPC and provides a
+ * centralized Job Board for players to view and manage those tasks.
+ * It does not override the NPC dialogue UI; instead, tasks are accepted
+ * and completed via the Job Board panel.  The script integrates with
+ * existing game helpers (state, countItem, addItem, removeItem, gainXP,
+ * openModal) and augments the LW object with new helpers:
+ *   LW.acceptNPCTask(npcId, taskId)
+ *   LW.completeNPCTask(npcId, taskId)
+ *   LW.openJobBoard()
+ */
+(function(){
+  const W  = window;
+  const LW = W.LW || (W.LW = { state:{ npcs:[] } });
+  LW.state = LW.state || { npcs:[] };
+
+  // Only proceed if NPCs exist.  This script expects the base game to have
+  // seeded LW.state.npcs via faction_npcs.js.  Without NPCs there is
+  // nothing to do.
+  if (!Array.isArray(LW.state.npcs) || LW.state.npcs.length === 0) return;
+
+  /* -------- NPC Tasks Definitions -------- */
+  // Each NPC id maps to an array of tasks.  Tasks have an id, title,
+  // description, requirements (items or caps), and rewards (items, caps,
+  // XP, trust).  Feel free to adjust values to balance gameplay.
+  const NPC_TASKS_DEF = {
+    pike: [
+      {
+        id: "pike_1",
+        title: "Restock Supplies",
+        desc: "Pike needs more materials for his caravans. Bring him 2× Junk and 1× Duct Tape.",
+        req: { items: [{id:"junk", qty:2}, {id:"duct_tape", qty:1}] },
+        reward: { caps: 30, xp: 10, trust: 5 }
+      },
+      {
+        id: "pike_2",
+        title: "Weapon Tune-Up",
+        desc: "Pike wants to upgrade his guards. Bring him 1 Revolver and 10 rounds of .38 Ammo.",
+        req: { items: [{id:"revolver", qty:1}, {id:"ammo_38", qty:10}] },
+        reward: { caps: 60, xp: 25, trust: 12 }
+      }
+    ],
+    mae: [
+      {
+        id: "mae_1",
+        title: "Medical Emergency",
+        desc: "Doc Mae needs medicine. Bring her 1 Rad Purge and 1 Duct Tape.",
+        req: { items: [{id:"rad_purge", qty:1}, {id:"duct_tape", qty:1}] },
+        reward: { caps: 50, xp: 20, trust: 10 }
+      },
+      {
+        id: "mae_2",
+        title: "Radiation Shield",
+        desc: "Mae wants extra Rad Shield for her field kit. Bring her 1 Rad Shield.",
+        req: { items: [{id:"rad_shield", qty:1}] },
+        reward: { caps: 20, xp: 10, trust: 6 }
+      }
+    ],
+    colt: [
+      {
+        id: "colt_1",
+        title: "Scout the Perimeter",
+        desc: "Ranger Colt is low on ammunition. Bring him 10 rounds of .308 Ammo.",
+        req: { items: [{id:"ammo_308", qty:10}] },
+        reward: { xp: 30, trust: 12, caps: 20 }
+      },
+      {
+        id: "colt_2",
+        title: "Sharpshooter Trial",
+        desc: "Prove your precision. Deliver 1 Hunting Rifle to Colt.",
+        req: { items: [{id:"hunting_rifle", qty:1}] },
+        reward: { xp: 35, trust: 14 }
+      }
+    ],
+    sal: [
+      {
+        id: "sal_1",
+        title: "Hot Merchandise",
+        desc: "Shady Sal wants you to fetch 2 junk and pay 15 caps. He'll make it worth your while.",
+        req: { items: [{id:"junk", qty:2}], caps: 15 },
+        reward: { caps: 40, xp: 15, trust: 8 }
+      }
+    ],
+    ishi: [
+      {
+        id: "ishi_1",
+        title: "Scrap Delivery",
+        desc: "Ishi needs spare parts. Bring 3× Junk to help her build something new.",
+        req: { items: [{id:"junk", qty:3}] },
+        reward: { caps: 25, xp: 12, trust: 6 }
+      }
+    ],
+    lark: [
+      {
+        id: "lark_1",
+        title: "Old Holotapes",
+        desc: "Old Man Lark is searching for lost stories. Find and bring him 1 Holotape.",
+        req: { items: [{id:"holotape", qty:1}] },
+        reward: { xp: 20, trust: 10, caps: 15 }
+      }
+    ]
+  };
+
+  /* -------- Generic role-based tasks -------- */
+  // These tasks provide procedural NPCs with something to do.  They will be cloned
+  // when assigned to an NPC.  Role keys are lower-case to match NPC.role.toLowerCase().
+  const GENERIC_ROLE_TASKS = {
+    trader: [
+      {
+        title: "Supply Run",
+        desc: "Help restock my stall. Bring me 2× Junk and 1× Duct Tape.",
+        req: { items: [{id: "junk", qty: 2}, {id:"duct_tape", qty: 1}] },
+        reward: { caps: 25, xp: 10, trust: 5 }
+      },
+      {
+        title: "Ammo Delivery",
+        desc: "Deliver 10 rounds of .38 Ammo for my customers.",
+        req: { items: [{id: "ammo_38", qty: 10}] },
+        reward: { caps: 30, xp: 12, trust: 6 }
+      }
+    ],
+    raider: [
+      {
+        title: "Requisition", // fancy word for stealing
+        desc: "We're low on firepower. Bring me 1 Revolver and 5 rounds of .45 Ammo.",
+        req: { items: [{id: "revolver", qty:1}, {id:"ammo_45", qty:5}] },
+        reward: { caps: 40, xp: 15, trust: 8 }
+      },
+      {
+        title: "Smash & Grab",
+        desc: "Snag me 3× Junk from a nearby settlement. They'll never know.",
+        req: { items: [{id: "junk", qty:3}] },
+        reward: { caps: 20, xp: 8, trust: 4 }
+      }
+    ],
+    scientist: [
+      {
+        title: "Artifact Analysis",
+        desc: "Bring me 1 Holotape and 1 Scrap to analyze.",
+        req: { items: [{id: "holotape", qty:1}, {id:"junk", qty:1}] },
+        reward: { xp: 25, trust: 6, caps: 15 }
+      },
+      {
+        title: "Rad Shield Calibration",
+        desc: "I need 1 Rad Shield and 1 Duct Tape to fix my instruments.",
+        req: { items: [{id:"rad_shield", qty:1}, {id:"duct_tape", qty:1}] },
+        reward: { xp: 20, caps: 10, trust: 5 }
+      }
+    ],
+    wanderer: [
+      {
+        title: "Mapping Expedition",
+        desc: "Explore the wastes and bring back news. Pay me 1 Holotape as proof.",
+        req: { items: [{id:"holotape", qty:1}] },
+        reward: { caps: 15, xp: 8, trust: 4 }
+      },
+      {
+        title: "Scrap Haul",
+        desc: "Gather 2× Junk on your travels and bring it here.",
+        req: { items: [{id:"junk", qty:2}] },
+        reward: { caps: 10, xp: 5, trust: 3 }
+      }
+    ]
+    ,
+    merc: [
+      {
+        title: "Ammo Requisition",
+        desc: "I'm low on ammo. Bring me 10 rounds of .45 Ammo.",
+        req: { items: [{id:"ammo_45", qty:10}] },
+        reward: { caps: 25, xp: 12, trust: 6 }
+      },
+      {
+        title: "Weapon Swap",
+        desc: "Looking for a fresh firearm. Bring me 1 Pistol to replace my old piece.",
+        req: { items: [{id:"pistol", qty:1}] },
+        reward: { caps: 35, xp: 15, trust: 8 }
+      }
+    ]
+  };
+
+  /* -------- Helpers -------- */
+  function ensureTasks(npc) {
+    // If tasks have not been assigned yet, clone from definitions and set status
+    if (!npc) return;
+    const defs = NPC_TASKS_DEF[npc.id] || [];
+    // If no explicit tasks, try generic role tasks
+    let tasksToAssign = defs;
+    if (defs.length === 0) {
+      const roleKey = (npc.role || "").toLowerCase().split(' ')[0];
+      const g = GENERIC_ROLE_TASKS[roleKey];
+      if (g && g.length) {
+        // Clone generic tasks and assign unique IDs per NPC
+        tasksToAssign = g.map((t, idx) => {
+          const clone = Object.assign({}, t);
+          clone.id = `gen_${roleKey}_${idx}_${npc.id}`;
+          return clone;
+        });
+      }
+    }
+    if (!npc.tasks) {
+      npc.tasks = tasksToAssign.map(d => Object.assign({}, d));
+      npc.taskStatus = {};
+      npc.tasks.forEach(t => { npc.taskStatus[t.id] = "available"; });
+    }
+  }
+  // Determine if the player meets the requirements of a task
+  function meetsRequirements(req) {
+    if (!req) return true;
+    const S = W.state || {};
+    if (req.items && Array.isArray(req.items)) {
+      for (const it of req.items) {
+        const count = (typeof W.countItem === 'function' ? W.countItem(it.id) : 0) || 0;
+        if (count < (it.qty || 1)) return false;
+      }
+    }
+    if (req.caps && (S.caps || 0) < req.caps) return false;
+    return true;
+  }
+  // Consume items and caps from the player when completing a task
+  function consumeRequirements(req) {
+    const S = W.state || {};
+    if (!req) return;
+    if (req.items && Array.isArray(req.items) && typeof W.removeItem === 'function') {
+      for (const it of req.items) {
+        for (let i = 0; i < (it.qty || 1); i++) W.removeItem(it.id);
+      }
+    }
+    if (req.caps) {
+      S.caps = (S.caps || 0) - req.caps;
+    }
+  }
+  // Grant rewards to the player and NPC
+  function grantRewards(npc, reward) {
+    const S = W.state || {};
+    if (!reward) return;
+    if (reward.items && Array.isArray(reward.items) && typeof W.addItem === 'function') {
+      for (const it of reward.items) {
+        for (let i = 0; i < (it.qty || 1); i++) W.addItem(it.id);
+      }
+    }
+    if (reward.caps) {
+      S.caps = (S.caps || 0) + reward.caps;
+    }
+    if (reward.xp) {
+      if (typeof W.gainXP === 'function') W.gainXP(reward.xp);
+      else S.xp = (S.xp || 0) + reward.xp;
+    }
+    if (reward.trust) {
+      npc.trust = Math.min(100, (npc.trust || 50) + reward.trust);
+    }
+  }
+
+  /* -------- Public API on LW -------- */
+  // Accept a task (marks status to 'accepted')
+  LW.acceptNPCTask = function(npcId, taskId) {
+    const npc = (LW.state.npcs || []).find(n => n.id === npcId);
+    if (!npc) return;
+    ensureTasks(npc);
+    if (!npc.taskStatus) npc.taskStatus = {};
+    const status = npc.taskStatus[taskId];
+    if (status !== 'available') return;
+    npc.taskStatus[taskId] = 'accepted';
+    // Log acceptance
+    try { (W.log || console.log)(`Task accepted: ${taskId}.`); } catch(_){}
+    if (typeof W.updateUI === 'function') W.updateUI();
+  };
+  // Complete a task (check requirements, consume, reward, mark completed)
+  LW.completeNPCTask = function(npcId, taskId) {
+    const npc = (LW.state.npcs || []).find(n => n.id === npcId);
+    if (!npc) return;
+    ensureTasks(npc);
+    const status = npc.taskStatus && npc.taskStatus[taskId];
+    if (status !== 'accepted') return;
+    const task = (npc.tasks || []).find(t => t.id === taskId);
+    if (!task) return;
+    if (!meetsRequirements(task.req)) {
+      try { (W.log || console.log)(`You do not meet the requirements for ${task.title}.`); } catch(_){}
+      return;
+    }
+    consumeRequirements(task.req);
+    grantRewards(npc, task.reward);
+    npc.taskStatus[taskId] = 'completed';
+    try { (W.log || console.log)(`Task completed: ${task.title}.`); } catch(_){}
+    if (typeof W.updateUI === 'function') W.updateUI();
+  };
+  // Display a modal listing all tasks for all NPCs
+  LW.openJobBoard = function() {
+    // Build HTML for each NPC
+    const npcs = (LW.state.npcs || []).map(n => { ensureTasks(n); return n; });
+    let html = '';
+    npcs.forEach(npc => {
+      if (!npc.tasks || npc.tasks.length === 0) return;
+      html += `<div style="margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <div><b>${npc.name}</b> (${npc.role||'NPC'})</div>`;
+      npc.tasks.forEach(t => {
+        const status = npc.taskStatus && npc.taskStatus[t.id];
+        let actionHtml = '';
+        if (status === 'available') {
+          actionHtml = `<button class="choice" onclick="LW.acceptNPCTask('${npc.id}','${t.id}'); LW.openJobBoard();">Accept</button>`;
+        } else if (status === 'accepted') {
+          const canComplete = meetsRequirements(t.req);
+          actionHtml = canComplete ? `<button class="choice" onclick="LW.completeNPCTask('${npc.id}','${t.id}'); LW.openJobBoard();">Complete</button>` : `<span class="muted">Missing items</span>`;
+        } else if (status === 'completed') {
+          actionHtml = `<span class="muted">Completed</span>`;
+        } else {
+          actionHtml = `<span class="muted">Unknown</span>`;
+        }
+        html += `<div style="margin-left:12px;margin-top:4px">
+          <b>${t.title}</b><br>
+          <span class="small muted">${t.desc}</span><br>
+          ${actionHtml}
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    if (!html) html = '<p>(No tasks available)</p>';
+    if (typeof W.openModal === 'function') {
+      const mdl = W.openModal('Job Board');
+      if (mdl && mdl.content) mdl.content.innerHTML = html;
+    } else if (typeof W.showModalSimple === 'function') {
+      W.showModalSimple('Job Board', html);
+    } else {
+      // Last resort: write to console/log
+      (W.log || console.log)('Job Board:\n' + html);
+    }
+  };
+  // Expose ensureTasks for other modules (e.g., NPC interaction)
+  LW.ensureNPCTasks = ensureTasks;
+  // Once the DOM is ready, wire up the button
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('btn-jobboard');
+      if (btn) btn.addEventListener('click', () => { LW.openJobBoard(); });
+    });
+  } else {
+    const btn = document.getElementById('btn-jobboard');
+    if (btn) btn.addEventListener('click', () => { LW.openJobBoard(); });
+  }
+  // Seed tasks for NPCs on script load
+  (LW.state.npcs || []).forEach(npc => ensureTasks(npc));
+})();</script>
+<script>// procedural_npcs.js
+// Procedural NPC Generation for Wastelife
+(function(){
+  // Ensure global LW namespace exists
+  const W = window;
+  const LW = W.LW || (W.LW = { state:{ npcs:[] } });
+  LW.state = LW.state || { npcs:[] };
+
+  // Pools of names, roles, factions and locations for NPC generation
+  const FIRST_NAMES = [
+    "Ash", "Blaze", "Cedar", "Dune", "Echo", "Flint",
+    "Gale", "Hazel", "Juno", "Kestrel", "Luna", "Moss",
+    "Nix", "Oak", "Pax", "Quill", "Roux", "Sable",
+    "Thorn", "Umber", "Vega", "Willow", "Xan", "Yarrow", "Zephyr"
+  ];
+  const LAST_NAMES = [
+    "Black", "Stone", "Reed", "Quarry", "Hawthorn", "Ridge",
+    "Ashcroft", "Vale", "Hollow", "Harrison", "Morrow", "Davenport",
+    "Rowan", "Mercer", "Graves", "Ridley", "Sloan", "Trask",
+    "Pike", "March", "Corrigan", "Frost"
+  ];
+  const ROLES = [
+    "Trader", "Raider", "Scientist", "Wanderer", "Scout",
+    "Merc", "Field Medic", "Mechanic", "Lab Tech", "Explorer",
+    "Hunter", "Farmer", "Caravan Guard", "Fence", "Scrapwright"
+  ];
+  // List of valid location IDs from the existing map (must match internal map IDs)
+  const LOCATIONS = [
+    "dustown", "ironwood", "dunes", "canyon",
+    "ruins_zone", "flats_zone", "swamp"
+  ];
+
+  // Helper to pick a random element from an array
+  function rnd(arr){
+    return arr[Math.floor(Math.random()*arr.length)];
+  }
+
+  // Maintain a simple counter for unique NPC IDs
+  let npcCounter = 0;
+  function nextId(){
+    npcCounter += 1;
+    return `proc_${npcCounter}`;
+  }
+
+  // Pools for personality traits. NPCs pick one from each category to define their behaviour.
+  const PERSONALITY_ATTITUDE = ["reckless", "cautious"];
+  const PERSONALITY_MORALITY = ["honorable", "backstabbing"];
+  const PERSONALITY_PRAGMATISM = ["pragmatic", "zealous"];
+
+  // Helper to generate a random short-term goal for an NPC.
+  function randomShortTermGoal() {
+    // Choose goal type; weighting can be adjusted later for personality influences
+    const types = ["raid", "trade", "research", "explore", "patrol", "recruit"];
+    const type = rnd(types);
+    // Pick a random location as the target for location-based goals
+    const target = rnd(LOCATIONS);
+    return { type, target };
+  }
+
+  // Helper to generate a random long-term goal for an NPC.
+  function randomLongTermGoal() {
+    const types = [
+      { type: "unify", desc: "unify raiders under one banner" },
+      { type: "prosper", desc: "ensure the prosperity of their people" },
+      { type: "knowledge", desc: "uncover lost knowledge and technology" },
+      { type: "power", desc: "rise to power within the wasteland" },
+      { type: "legend", desc: "become a legend of the wastes" }
+    ];
+    return rnd(types);
+  }
+
+  // Assign random relationships between the new NPC and existing ones. Allies and rivals create gossip and tension.
+  function assignRelationships(npc, npcs) {
+    // With a small chance, create an ally or rival relationship with one existing NPC
+    if (!npcs || npcs.length === 0) return;
+    // Maximum one relationship for simplicity
+    if (Math.random() < 0.5) {
+      const other = rnd(npcs.filter(o => o.id !== npc.id));
+      const relation = Math.random() < 0.5 ? "ally" : "rival";
+      npc.relationships = npc.relationships || {};
+      other.relationships = other.relationships || {};
+      npc.relationships[other.id] = relation;
+      // The other side sees the same relationship
+      other.relationships[npc.id] = relation;
+    }
+  }
+
+  // Generate a random NPC object
+  function generateNPC(){
+    // Determine factions list; fall back to known IDs if FACTIONS undefined
+    const fList = (Array.isArray(W.FACTIONS) && W.FACTIONS.length)
+      ? W.FACTIONS.map(f => f.id)
+      : ["settlers","rangers","scribes","dust_marauders","none"];
+    const id      = nextId();
+    const name    = `${rnd(FIRST_NAMES)} ${rnd(LAST_NAMES)}`;
+    const role    = rnd(ROLES);
+    const factionId = rnd(fList);
+    const locId   = rnd(LOCATIONS);
+    // Base relationship stats (0–100)
+    const trust   = Math.floor(Math.random()*50) + 25;
+    const respect = Math.floor(Math.random()*50);
+    const affection = Math.floor(Math.random()*50);
+    // Base values used for memory adjustments. Age indicates lifecycle stage.
+    const baseTrust = trust;
+    const baseRespect = respect;
+    const baseAffection = affection;
+    const age = Math.floor(Math.random() * 40) + 18; // 18–57
+    // Choose personality traits
+    const attitude = rnd(PERSONALITY_ATTITUDE);
+    const morality = rnd(PERSONALITY_MORALITY);
+    const pragmatism = rnd(PERSONALITY_PRAGMATISM);
+    const personality = { attitude, morality, pragmatism };
+    // Assign goals
+    const shortGoal = randomShortTermGoal();
+    const longGoal = randomLongTermGoal();
+    const goals = { short: shortGoal, long: longGoal };
+    // Mood/state variables: morale, health, wealth, stress (0–100)
+    const morale = Math.floor(Math.random() * 40) + 30; // 30–69
+    const health = Math.floor(Math.random() * 40) + 30;
+    const wealth = Math.floor(Math.random() * 40) + 30;
+    const stress = Math.floor(Math.random() * 40) + 30;
+    return {
+      id,
+      name,
+      role,
+      factionId,
+      locId,
+      baseTrust,
+      baseRespect,
+      baseAffection,
+      trust,
+      respect,
+      affection,
+      memory: [],
+      alive: true,
+      age,
+      childOf: null,
+      // New dynamic fields
+      personality,
+      goals,
+      morale,
+      health,
+      wealth,
+      stress,
+      relationships: {}
+    };
+  }
+
+  // Spawn a new procedural NPC and push into LW.state.npcs
+  function spawnNPC(){
+    if (!LW.state.npcs) LW.state.npcs = [];
+    const npc = generateNPC();
+    // Push to state first so assignRelationships can reference existing NPCs
+    LW.state.npcs.push(npc);
+    // Assign relationships with a chance to create an ally or rival
+    try {
+      assignRelationships(npc, LW.state.npcs);
+    } catch(_ignored){}
+    // For debugging: log spawn to Life Log if available
+    try {
+      (W.log||console.log)(`A new face emerges: ${npc.name} (${npc.role})`);
+    } catch(_){}
+  }
+
+  // Ensure all existing NPCs (including hard-coded faction NPCs) have dynamic attributes.
+  function ensureNPCAttributes() {
+    if (!Array.isArray(LW.state.npcs)) return;
+    for (const npc of LW.state.npcs) {
+      if (!npc.personality) {
+        const attitude = rnd(PERSONALITY_ATTITUDE);
+        const morality = rnd(PERSONALITY_MORALITY);
+        const pragmatism = rnd(PERSONALITY_PRAGMATISM);
+        npc.personality = { attitude, morality, pragmatism };
+      }
+      if (!npc.goals) {
+        npc.goals = {
+          short: randomShortTermGoal(),
+          long: randomLongTermGoal()
+        };
+      }
+      if (typeof npc.morale !== 'number') npc.morale = Math.floor(Math.random()*40)+30;
+      if (typeof npc.health !== 'number') npc.health = Math.floor(Math.random()*40)+30;
+      if (typeof npc.wealth !== 'number') npc.wealth = Math.floor(Math.random()*40)+30;
+      if (typeof npc.stress !== 'number') npc.stress = Math.floor(Math.random()*40)+30;
+      npc.relationships = npc.relationships || {};
+      // Ensure base values for memory adjustments exist
+      if (typeof npc.baseTrust !== 'number') npc.baseTrust = npc.trust || 50;
+      if (typeof npc.baseRespect !== 'number') npc.baseRespect = npc.respect || 25;
+      if (typeof npc.baseAffection !== 'number') npc.baseAffection = npc.affection || 25;
+
+      // If current respect/affection undefined, seed with base or random
+      if (typeof npc.respect !== 'number') npc.respect = npc.baseRespect;
+      if (typeof npc.affection !== 'number') npc.affection = npc.baseAffection;
+    }
+    // After ensuring attributes, assign a couple relationships between randomly chosen NPCs
+    // to foster rivalries/alliances in the world. Limit relationships to avoid over-linking.
+    const aliveNpcs = LW.state.npcs.filter(n => n.alive !== false);
+    for (const npc of aliveNpcs) {
+      // Skip if already has at least one relationship
+      if (npc.relationships && Object.keys(npc.relationships).length) continue;
+      assignRelationships(npc, aliveNpcs);
+    }
+  }
+
+  // Remove NPCs flagged as dead (alive === false)
+  function removeDeadNPCs(){
+    if (!LW.state.npcs) return;
+    LW.state.npcs = LW.state.npcs.filter(n => n.alive !== false);
+  }
+
+  // Determine if we should spawn a new NPC this cycle
+  function maybeSpawnNPC(){
+    const aliveCount = (LW.state.npcs||[]).filter(n=>n.alive!==false).length;
+    // If too few NPCs or random chance, spawn one
+    if (aliveCount < 10 || Math.random() < 0.30) {
+      spawnNPC();
+    }
+  }
+
+  // Hook into Age Up button: on each year tick, clean up and spawn new NPCs
+  function attachAgeHook(){
+    const btn = document.getElementById("btn-age");
+    if (!btn || btn.dataset.procNpcs) return;
+    btn.dataset.procNpcs = "1";
+    btn.addEventListener("click", () => {
+      // Defer to end of event loop so other age-up handlers run first
+      setTimeout(() => {
+        removeDeadNPCs();
+        maybeSpawnNPC();
+        // Refresh UI
+        if (W.updateUI) W.updateUI();
+      }, 0);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", attachAgeHook);
+  } else {
+    attachAgeHook();
+  }
+
+  // Initial spawn on first run/load
+  if (!LW.state.__procNPCSeeded){
+    LW.state.__procNPCSeeded = true;
+    for (let i=0; i<5; i++){
+      spawnNPC();
+    }
+  }
+
+  // After initial spawns, backfill all NPCs (including hard-coded ones) with dynamic attributes
+  ensureNPCAttributes();
+
+  // Expose functions and data for interoperability with legacy/world systems.
+  // This allows external scripts to spawn NPCs and reference the name/location pools.
+  W.spawnNPC = spawnNPC;
+  W.maybeSpawnNPC = maybeSpawnNPC;
+  W.PROC_FIRST_NAMES = FIRST_NAMES;
+  W.PROC_LOCATIONS = LOCATIONS;
+
+})();</script>
+<script>// npc_legacy.js
+// NPC Memory, Legacy System, and World Simulation
+// This script augments Wastelife with generational continuity and background world dynamics.
+(function(){
+  const W = window;
+  const LW = W.LW || (W.LW = { state:{} });
+  // Ensure global tracking structures exist
+  LW.state.charCounter = LW.state.charCounter || 1;
+  LW.state.lineage = LW.state.lineage || [];
+  LW.state.worldTicks = LW.state.worldTicks || 0;
+  LW.state.inheritance = LW.state.inheritance || null;
+
+  // Local helpers (replicate sample)
+  const sample = arr => arr[Math.floor(Math.random() * arr.length)];
+  // Use clamp from main.js if available; fallback
+  const clampFn = W.clamp || ((v,min,max)=>Math.max(min, Math.min(max, v)));
+
+  /** Apply memory from a parent character to all living NPCs. */
+  function applyNPCMemory(parentId){
+    if (!parentId) return;
+    const npcs = LW.state.npcs || [];
+    for (const npc of npcs) {
+      // reset trust/respect/affection to base if available
+      if (typeof npc.baseTrust === "number") {
+        npc.trust = npc.baseTrust;
+        npc.respect = npc.baseRespect;
+        npc.affection = npc.baseAffection;
+      }
+      // find entries for given parent
+      const entries = (npc.memory || []).filter(m => m.charId === parentId);
+      for (const entry of entries) {
+        npc.trust = clampFn(npc.trust + (entry.trustDelta || 0), 0, 100);
+        npc.respect = clampFn(npc.respect + (entry.respectDelta || 0), 0, 100);
+        npc.affection = clampFn(npc.affection + (entry.affectionDelta || 0), 0, 100);
+      }
+    }
+  }
+
+  /** Record the relationship deltas between the current character and all NPCs. */
+  function recordNPCMemoryOnDeath(charId){
+    if (!charId) return;
+    const npcs = LW.state.npcs || [];
+    for (const npc of npcs) {
+      if (typeof npc.baseTrust === "number") {
+        const dT = (npc.trust || 0) - (npc.baseTrust || 0);
+        const dR = (npc.respect || 0) - (npc.baseRespect || 0);
+        const dA = (npc.affection || 0) - (npc.baseAffection || 0);
+        if (dT || dR || dA) {
+          npc.memory = npc.memory || [];
+          npc.memory.push({
+            charId: charId,
+            trustDelta: dT,
+            respectDelta: dR,
+            affectionDelta: dA
+          });
+        }
+      }
+    }
+  }
+
+  /** Compute inheritance and start a new character after death. */
+  function handleLegacyOnDeath(){
+    // Push the deceased into lineage
+    if (state.charId != null) {
+      LW.state.lineage.push({
+        charId: state.charId,
+        name: state.name,
+        age: state.age,
+        faction: state.faction,
+        factionRep: state.factionRep,
+        caps: state.caps,
+        inventory: Array.isArray(state.inventory) ? state.inventory.slice() : []
+      });
+    }
+    // Determine inheritance share
+    const capsInherit = Math.floor((state.caps || 0) * 0.5);
+    const inv = Array.isArray(state.inventory) ? state.inventory.slice() : [];
+    const itemCount = Math.min(3, Math.floor(inv.length * 0.3) || 0);
+    const items = [];
+    for (let i=0; i<itemCount; i++){
+      const idx = Math.floor(Math.random() * inv.length);
+      items.push(inv[idx]);
+      inv.splice(idx,1);
+    }
+    const rep = Math.floor((state.factionRep || 0) * 0.5);
+    LW.state.inheritance = { caps: capsInherit, items, factionRep: rep };
+    // Record memory for NPCs
+    recordNPCMemoryOnDeath(state.charId);
+    // Start new generation after a brief pause
+    setTimeout(() => {
+      if (typeof W.log === "function") {
+        W.log("Your descendant takes up your legacy...", "muted");
+      }
+      if (typeof W.newRun === "function") {
+        W.newRun();
+      }
+    }, 500);
+  }
+
+  /** Spawn a child NPC inheriting some attributes from a parent NPC. */
+  function spawnChildNPC(parent){
+    if (!parent) return;
+    // Use arrays from procedural NPCs if available; otherwise fallback to defaults
+    const firstNames = W.PROC_FIRST_NAMES || [
+      "Ash","Blaze","Cedar","Dune","Echo","Flint",
+      "Gale","Hazel","Juno","Kestrel","Luna","Moss",
+      "Nix","Oak","Pax","Quill","Roux","Sable",
+      "Thorn","Umber","Vega","Willow","Xan","Yarrow","Zephyr"
+    ];
+    const locPool = W.PROC_LOCATIONS || [
+      "dustown","ironwood","dunes","canyon",
+      "ruins_zone","flats_zone","swamp"
+    ];
+    // Construct new NPC
+    const lastName = (parent.name || "").split(" ").slice(-1)[0] || "Ridge";
+    const newName = `${sample(firstNames)} ${lastName}`;
+    const role = parent.role;
+    const factionId = parent.factionId;
+    const locId = sample(locPool);
+    // Base relationship values randomised but similar to parent's base
+    const baseT = clampFn((parent.baseTrust || 50) + Math.floor(Math.random()*20) - 10, 0, 100);
+    const baseR = clampFn((parent.baseRespect || 50) + Math.floor(Math.random()*20) - 10, 0, 100);
+    const baseA = clampFn((parent.baseAffection || 50) + Math.floor(Math.random()*20) - 10, 0, 100);
+    const npc = {
+      id: `proc_${(LW.state.npcs?.length || 0) + 1}_${Date.now()}`,
+      name: newName,
+      role,
+      factionId,
+      locId,
+      baseTrust: baseT,
+      baseRespect: baseR,
+      baseAffection: baseA,
+      trust: baseT,
+      respect: baseR,
+      affection: baseA,
+      memory: [],
+      alive: true,
+      age: 18,
+      childOf: parent.id
+    };
+    // Inherit dampened memory from parent
+    if (Array.isArray(parent.memory)) {
+      for (const entry of parent.memory) {
+        npc.memory.push({
+          charId: entry.charId,
+          trustDelta: Math.round((entry.trustDelta || 0) * 0.5),
+          respectDelta: Math.round((entry.respectDelta || 0) * 0.5),
+          affectionDelta: Math.round((entry.affectionDelta || 0) * 0.5)
+        });
+      }
+    }
+    LW.state.npcs = LW.state.npcs || [];
+    LW.state.npcs.push(npc);
+    if (typeof W.log === "function") {
+      W.log(`A new generation rises: ${npc.name} takes their parent's place.`, "muted");
+    }
+  }
+
+  /** Remove NPCs flagged as dead from global state. */
+  function removeDeadNPCsLocal(){
+    if (!LW.state.npcs) return;
+    LW.state.npcs = LW.state.npcs.filter(n => n.alive !== false);
+  }
+
+  /** Background world simulation executed every 5 time ticks. */
+  function runWorldSimulation(){
+    // First update NPC states (mood/goals) before other world events
+    updateNPCStates();
+    const npcs = LW.state.npcs || [];
+    // Age and evaluate each NPC
+    for (const npc of npcs) {
+      // Increment age
+      npc.age = (npc.age || Math.floor(Math.random()*30)+20) + 1;
+      // Determine death due to old age
+      if (npc.alive && npc.age > 70 && Math.random() < 0.2) {
+        npc.alive = false;
+        if (typeof W.log === "function") W.log(`${npc.name} passed away due to old age.`, "muted");
+        // If raider-like, spawn child successor
+        if (npc.role && /Raider|Lord|Chief/i.test(npc.role)) {
+          spawnChildNPC(npc);
+        }
+      } else if (npc.alive && Math.random() < 0.05) {
+        npc.alive = false;
+        if (typeof W.log === "function") W.log(`${npc.name} met their fate in the wastes.`, "muted");
+      }
+    }
+    removeDeadNPCsLocal();
+    // Traders and wanderers relocate
+    for (const npc of npcs) {
+      if (!npc.alive) continue;
+      const role = npc.role || "";
+      if (/Trader|Caravan Guard|Farmer|Fence|Wanderer/i.test(role)) {
+        const locPool = W.PROC_LOCATIONS || [
+          "dustown","ironwood","dunes","canyon",
+          "ruins_zone","flats_zone","swamp"
+        ];
+        npc.locId = sample(locPool);
+        if (typeof W.log === "function") W.log(`${npc.name} relocated to another settlement.`, "muted");
+      }
+    }
+    // Raiders may attack a random location
+    const raiders = npcs.filter(n => n.alive && /Raider/i.test(n.role));
+    if (raiders.length) {
+      // Base attack chance
+      let attackChance = 0.3;
+      // Reduce chance based on player's settlement defenses
+      const def = (state.settlement && state.settlement.defense) || 0;
+      attackChance = Math.max(0.05, attackChance - (def * 0.005));
+      if (Math.random() < attackChance) {
+        const locPool = W.PROC_LOCATIONS || [
+          "dustown","ironwood","dunes","canyon",
+          "ruins_zone","flats_zone","swamp"
+        ];
+        const loc = sample(locPool);
+        if (typeof W.log === "function") W.log(`Raiders launch an attack on ${loc}.`, "danger");
+        // If the player's camp is attacked (assume 'camp' at player's location)
+        if (state.location && Math.random() < 0.5) {
+          // Loss of scrap or building damage
+          if (state.settlement) {
+            const loss = 5 + Math.floor(Math.random()*5);
+            const scrapLost = Math.min(loss, state.settlement.scrap || 0);
+            if (scrapLost > 0) {
+              state.settlement.scrap -= scrapLost;
+              if (typeof W.log === "function") W.log(`Raiders plunder your settlement for ${scrapLost} scrap!`, "danger");
+            } else if (state.settlement.buildings && state.settlement.buildings.length) {
+              // Destroy a random building
+              const idx = Math.floor(Math.random() * state.settlement.buildings.length);
+              const destroyed = state.settlement.buildings.splice(idx,1)[0];
+              const buildingNames = { shack:"Shack", waterStill:"Water Still", workshop:"Workshop", watchTower:"Watch Tower" };
+              const label = buildingNames[destroyed] || destroyed;
+              if (typeof W.log === "function") W.log(`Raiders destroy your ${label}!`, "danger");
+            }
+          }
+        }
+      }
+    }
+    // Evolve factions slightly
+    if (typeof W.updateFactions === "function") {
+      W.updateFactions();
+    }
+    // Rare chance of faction collapse
+    if (Array.isArray(W.FACTIONS) && LW.state.factions) {
+      const f = sample(W.FACTIONS);
+      const fid = f.id;
+      const fs = LW.state.factions[fid];
+      if (fs && fs.level <= 1 && Math.random() < 0.05) {
+        fs.level = 0;
+        if (typeof W.log === "function") W.log(`The ${f.name} faction has collapsed due to infighting.`, "danger");
+      }
+    }
+    // Keep NPC population healthy
+    if (typeof W.maybeSpawnNPC === "function") {
+      W.maybeSpawnNPC();
+    }
+    // Refresh UI after world changes
+    if (typeof W.updateUI === "function") W.updateUI();
+
+    // Settlement workshop production: occasional free consumable
+    try {
+      if (state && state.hasWorkshop && Math.random() < 0.2) {
+        // simple pool of items produced by workshop
+        const pool = ["duct_tape", "med_patch", "junk"];
+        const item = pool[Math.floor(Math.random()*pool.length)];
+        if (typeof W.addItem === "function") {
+          W.addItem(item, 1);
+        } else {
+          // fallback: push to inventory
+          state.inventory = state.inventory || [];
+          state.inventory.push(item);
+        }
+        if (typeof W.log === "function") W.log(`Your workshop produces a ${W.ITEMS?.[item]?.name || item}.`, "muted");
+      }
+    } catch(e) {
+      console.error("Error in workshop production:", e);
+    }
+  }
+
+  /** Increment global world tick and trigger simulation every 5 ticks. */
+  function incrementWorldTick(){
+    LW.state.worldTicks = (LW.state.worldTicks || 0) + 1;
+    if (LW.state.worldTicks % 5 === 0) {
+      runWorldSimulation();
+    }
+  }
+
+  // Save original functions to wrap them with tick increment and legacy logic
+  const origNewRun = W.newRun;
+  W.newRun = function(){
+    if (typeof origNewRun === "function") {
+      origNewRun();
+    }
+    // Assign character ID and parent ID for generational tracking
+    const cid = LW.state.charCounter || 1;
+    state.charId = cid;
+    LW.state.charCounter = cid + 1;
+    state.parentCharId = LW.state.lineage.length ? LW.state.lineage[LW.state.lineage.length - 1].charId : null;
+    // Apply pending inheritance to new character
+    const inh = LW.state.inheritance;
+    if (inh) {
+      state.caps = (state.caps || 0) + (inh.caps || 0);
+      if (Array.isArray(inh.items)) {
+        for (const item of inh.items) {
+          if (typeof W.addItem === "function") {
+            W.addItem(item, 1);
+          } else {
+            state.inventory = state.inventory || [];
+            state.inventory.push(item);
+          }
+        }
+      }
+      state.factionRep = Math.max(state.factionRep || 0, inh.factionRep || 0);
+      LW.state.inheritance = null;
+    }
+    // Apply NPC memory adjustments
+    applyNPCMemory(state.parentCharId);
+    if (typeof W.updateUI === "function") W.updateUI();
+  };
+
+  const origDie = W.die;
+  W.die = function(){
+    if (typeof origDie === "function") origDie();
+    // Immediately handle legacy on death
+    handleLegacyOnDeath();
+  };
+
+  // Wrap major actions to include world ticks
+  const origExplore = W.explore;
+  if (origExplore) {
+    W.explore = function(){
+      const res = origExplore.apply(this, arguments);
+      incrementWorldTick();
+      return res;
+    };
+  }
+  const origWork = W.work;
+  if (origWork) {
+    W.work = function(){
+      const res = origWork.apply(this, arguments);
+      incrementWorldTick();
+      return res;
+    };
+  }
+  const origTravelTo = W.travelTo;
+  if (origTravelTo) {
+    W.travelTo = function(){
+      const res = origTravelTo.apply(this, arguments);
+      incrementWorldTick();
+      return res;
+    };
+  }
+  // Wrap maybeStartCombat to increment world tick when a fight starts
+  const origMaybeStartCombat = W.maybeStartCombat;
+  if (origMaybeStartCombat) {
+    W.maybeStartCombat = function(){
+      const result = origMaybeStartCombat.apply(this, arguments);
+      if (result) {
+        incrementWorldTick();
+      }
+      return result;
+    };
+  }
+
+  // Expose some functions globally for debugging or other modules
+  W.applyNPCMemory = applyNPCMemory;
+  W.recordNPCMemoryOnDeath = recordNPCMemoryOnDeath;
+  W.handleLegacyOnDeath = handleLegacyOnDeath;
+  W.runWorldSimulation = runWorldSimulation;
+  W.incrementWorldTick = incrementWorldTick;
+  W.spawnChildNPC = spawnChildNPC;
+
+  /**
+   * Update NPC mood/state and attempt to progress their goals.
+   * This function simulates the daily lives of NPCs between player actions.
+   * It is called at the beginning of each world simulation cycle.
+   */
+  function updateNPCStates() {
+    const npcs = LW.state.npcs || [];
+    for (const npc of npcs) {
+      if (!npc.alive) continue;
+      // Ensure mood properties exist
+      npc.morale = typeof npc.morale === "number" ? npc.morale : 50;
+      npc.health = typeof npc.health === "number" ? npc.health : 50;
+      npc.wealth = typeof npc.wealth === "number" ? npc.wealth : 50;
+      npc.stress = typeof npc.stress === "number" ? npc.stress : 50;
+      npc.goals = npc.goals || {};
+      npc.personality = npc.personality || { attitude: "cautious", morality: "honorable", pragmatism: "pragmatic" };
+      // Slightly adjust mood values randomly to simulate daily variance
+      npc.morale = clampFn(npc.morale + Math.floor(Math.random()*7) - 3, 0, 100);
+      npc.wealth = clampFn(npc.wealth + Math.floor(Math.random()*5) - 2, 0, 100);
+      npc.stress = clampFn(npc.stress + Math.floor(Math.random()*7) - 3, 0, 100);
+      // Stress and low morale affect health
+      if (npc.stress > 70) npc.health = clampFn(npc.health - Math.floor(Math.random()*3), 0, 100);
+      if (npc.morale < 30) npc.health = clampFn(npc.health - Math.floor(Math.random()*2), 0, 100);
+      // Attempt to fulfill short-term goal
+      const sg = npc.goals.short;
+      if (sg && sg.type) {
+        // Determine base success chance
+        let successChance = 0.6;
+        const att = npc.personality.attitude || "cautious";
+        const mor = npc.personality.morality || "honorable";
+        const prag = npc.personality.pragmatism || "pragmatic";
+        // Personality influence: reckless favours raid/recruit; cautious favours trade/patrol/explore
+        if (att === "reckless" && (sg.type === "raid" || sg.type === "recruit")) successChance += 0.2;
+        if (att === "cautious" && (sg.type === "trade" || sg.type === "patrol" || sg.type === "explore")) successChance += 0.2;
+        // Morality: backstabbing more likely to succeed at raid; honorable more likely to succeed at trade/research
+        if (mor === "backstabbing" && sg.type === "raid") successChance += 0.1;
+        if (mor === "honorable" && (sg.type === "trade" || sg.type === "research")) successChance += 0.1;
+        // Pragmatism: pragmatic favours trade/patrol; zealous favours research/raid
+        if (prag === "pragmatic" && (sg.type === "trade" || sg.type === "patrol")) successChance += 0.1;
+        if (prag === "zealous" && (sg.type === "research" || sg.type === "raid")) successChance += 0.1;
+        // Mood influences: high morale increases success; high stress decreases
+        successChance += (npc.morale - 50) / 200; // +0.25 at 100 morale, -0.25 at 0 morale
+        successChance -= (npc.stress - 50) / 200;
+        // Clamp success between 0.1 and 0.9
+        successChance = Math.max(0.1, Math.min(0.9, successChance));
+        const succeeded = Math.random() < successChance;
+        // Compose a human-readable goal description for logging
+        let actionDesc;
+        switch (sg.type) {
+          case "raid":
+            actionDesc = `raid ${sg.target}`;
+            break;
+          case "trade":
+            actionDesc = `trade with ${sg.target}`;
+            break;
+          case "research":
+            actionDesc = `study ancient tech at ${sg.target}`;
+            break;
+          case "explore":
+            actionDesc = `explore the area around ${sg.target}`;
+            break;
+          case "patrol":
+            actionDesc = `patrol the wastes near ${sg.target}`;
+            break;
+          case "recruit":
+            actionDesc = `recruit new members in ${sg.target}`;
+            break;
+          default:
+            actionDesc = `${sg.type} at ${sg.target}`;
+        }
+        if (succeeded) {
+          // Successful goal completion improves morale and wealth, reduces stress
+          npc.morale = clampFn(npc.morale + 10, 0, 100);
+          npc.wealth = clampFn(npc.wealth + Math.floor(Math.random()*10) + 5, 0, 100);
+          npc.stress = clampFn(npc.stress - 5, 0, 100);
+          // Move location if goal involves travel
+          if (["raid","trade","explore","patrol","recruit","research"].includes(sg.type)) {
+            npc.locId = sg.target;
+          }
+          // If raid success, other factions might be affected (log it)
+          if (typeof W.log === "function") {
+            W.log(`${npc.name} succeeded in their mission to ${actionDesc}.`, "muted");
+          }
+        } else {
+          // Failure decreases morale and health, increases stress
+          npc.morale = clampFn(npc.morale - 10, 0, 100);
+          npc.health = clampFn(npc.health - Math.floor(Math.random()*8), 0, 100);
+          npc.stress = clampFn(npc.stress + 7, 0, 100);
+          npc.wealth = clampFn(npc.wealth - Math.floor(Math.random()*5), 0, 100);
+          if (typeof W.log === "function") {
+            W.log(`${npc.name}'s attempt to ${actionDesc} went poorly.`, "danger");
+          }
+        }
+        // Assign a new short-term goal regardless of outcome
+        const newTarget = (W.PROC_LOCATIONS && W.PROC_LOCATIONS.length) ? sample(W.PROC_LOCATIONS) : sg.target;
+        npc.goals.short = randomShortTermGoal();
+        // Sometimes progress long-term goal when successful
+        if (succeeded && npc.goals.long && Math.random() < 0.1) {
+          // After a few successes, the long-term goal might shift as they get closer to completion
+          const types = ["unify","prosper","knowledge","power","legend"];
+          const newLong = sample(types.filter(t => t !== npc.goals.long.type));
+          npc.goals.long = { type: newLong, desc: npc.goals.long.desc };
+        }
+      }
+      // Mortality: if health or morale drop to zero, NPC dies
+      if (npc.health <= 0 || npc.morale <= 0) {
+        npc.alive = false;
+        if (typeof W.log === "function") {
+          W.log(`${npc.name} has died due to ${npc.health <= 0 ? 'injuries' : 'despair'}.`, "danger");
+        }
+        // If they are raider-like, spawn a child successor
+        if (npc.role && /Raider|Lord|Chief/i.test(npc.role)) {
+          spawnChildNPC(npc);
+        }
+      }
+    }
+    // Clean up dead NPCs from relationships
+    // remove dead IDs from other NPCs' relationships
+    const aliveIds = new Set(npcs.filter(n => n.alive).map(n => n.id));
+    for (const npc of npcs) {
+      if (!npc.relationships) continue;
+      for (const rid in npc.relationships) {
+        if (!aliveIds.has(rid)) delete npc.relationships[rid];
+      }
+    }
+  }
+
+  // Local helper function to generate a random short-term goal (same as in procedural NPCs).
+  function randomShortTermGoal() {
+    const types = ["raid", "trade", "research", "explore", "patrol", "recruit"];
+    const type = sample(types);
+    const locPool = W.PROC_LOCATIONS || ["dustown","ironwood","dunes","canyon","ruins_zone","flats_zone","swamp"];
+    const target = sample(locPool);
+    return { type, target };
+  }
+
+})();</script>
+<script>// faction_leaders.js
+// Faction Leaders & NPC Integration
+// This script assigns a leader to each faction, keeps the global NPC list
+// in sync with the core game state, and augments the faction UI to show
+// leader information. It should be loaded after main.js, faction_npcs.js
+// and procedural_npcs.js so that FACTIONS, LW.state.npcs and state.factions
+// have been initialized.
+
+(function(){
+  const W = window;
+  const LW = W.LW || (W.LW = { state:{} });
+  LW.state = LW.state || {};
+
+  // Ensure the core state exists
+  if (!W.state) {
+    W.state = {};
+  }
+
+  // Helper: pick a leader role name appropriate for a faction. You can
+  // customize these titles per faction as desired.
+  const LEADER_TITLES = {
+    settlers: "Union Leader",
+    rangers: "Ranger Captain",
+    scribes: "Head Scribe",
+    dust_marauders: "Raid Lord",
+    none: "Independent Leader"
+  };
+
+  /** Assign a leader to each faction if one does not already exist.
+   * This function looks through LW.state.npcs for alive members of each
+   * faction that have leadership-style roles. If none exist, it will
+   * spawn a new procedural NPC, set their factionId and role to an
+   * appropriate leader title, and register them as the faction leader.
+   * The chosen leader's ID is stored on state.factions[fid].leaderId.
+   */
+  function assignFactionLeaders() {
+    // Ensure state.factions exists (seeded by main.js or npc_legacy.js)
+    if (!state.factions) return;
+    const factions = state.factions;
+    const allNPCs = LW.state.npcs || [];
+    // Function to spawn a new NPC with a given faction and role.
+    function createLeaderFor(fid) {
+      // Use procedural NPC generator if available
+      let npc;
+      if (typeof W.spawnNPC === 'function') {
+        W.spawnNPC();
+        npc = allNPCs[allNPCs.length - 1];
+      } else {
+        // Fallback: create a minimal NPC
+        const id = `leader_${fid}_${Date.now()}`;
+        npc = {
+          id: id,
+          name: `${fid} Leader`,
+          role: "Leader",
+          factionId: fid,
+          locId: "ironwood",
+          trust: 50,
+          baseTrust: 50,
+          baseRespect: 50,
+          baseAffection: 50,
+          respect: 50,
+          affection: 50,
+          memory: [],
+          alive: true,
+          age: Math.floor(Math.random() * 20) + 25
+        };
+        allNPCs.push(npc);
+      }
+      // Set explicit faction and leader role
+      npc.factionId = fid;
+      npc.role = LEADER_TITLES[fid] || "Leader";
+      return npc;
+    }
+    // Loop through each faction except "none"
+    for (const fid of Object.keys(factions)) {
+      if (fid === 'none') continue;
+      const fs = factions[fid];
+      // If a leader exists and is alive, continue
+      if (fs.leaderId) {
+        const existing = allNPCs.find(n => n.id === fs.leaderId && n.alive !== false);
+        if (existing) {
+          // Ensure their role is a leader title
+          existing.role = existing.role || (LEADER_TITLES[fid] || "Leader");
+          existing.factionId = fid;
+          continue;
+        }
+      }
+      // Find any alive NPC with matching faction and a role implying leadership
+      const candidate = allNPCs.find(n => n.alive !== false && n.factionId === fid && /Leader|Chief|Captain|Lord|Warlord|Boss/i.test(String(n.role)));
+      const leader = candidate || createLeaderFor(fid);
+      // Record leader ID on faction state
+      fs.leaderId = leader.id;
+    }
+  }
+
+  /** Synchronize state.npcs with LW.state.npcs.
+   * Many legacy UIs (like the Social panel) reference state.npcs; but
+   * procedural and faction scripts store NPCs in LW.state.npcs. This
+   * utility copies the array over so both lists reference the same NPCs.
+   */
+  function syncNPCLists() {
+    if (!LW.state.npcs) {
+      LW.state.npcs = [];
+    }
+    state.npcs = LW.state.npcs;
+  }
+
+  /** Augment the faction UI after it renders. Adds a Leader row that
+   * displays the name and role of the faction's leader. If the leader
+   * cannot be found, no row is inserted. This wrapper relies on the
+   * existing DOM structure of openJoinFaction: the modal content
+   * resides in an element with id 'modal-content'.
+   */
+  function injectLeaderIntoFactionModal(fid) {
+    const fs = state.factions && state.factions[fid];
+    if (!fs || !fs.leaderId) return;
+    const npc = (LW.state.npcs || []).find(n => n.id === fs.leaderId);
+    if (!npc) return;
+    // Wait for the modal to exist in the DOM; then insert leader row
+    setTimeout(() => {
+      const modal = document.getElementById('modal-content');
+      if (!modal) return;
+      // Find the "Status" row to insert after
+      const rows = modal.querySelectorAll('div.kv');
+      let insertAfter = null;
+      rows.forEach(r => {
+        const first = r.firstElementChild;
+        if (first && first.textContent && first.textContent.trim() === 'Status') {
+          insertAfter = r;
+        }
+      });
+      // Build leader row
+      const leaderRow = document.createElement('div');
+      leaderRow.className = 'kv';
+      const label = document.createElement('div');
+      label.textContent = 'Leader';
+      const value = document.createElement('div');
+      value.innerHTML = `<b>${npc.name}</b> (${npc.role || 'Leader'})`;
+      leaderRow.appendChild(label);
+      leaderRow.appendChild(value);
+      // Insert after the Status row or at end of modal body
+      if (insertAfter && insertAfter.parentNode) {
+        insertAfter.parentNode.insertBefore(leaderRow, insertAfter.nextSibling);
+      } else {
+        modal.appendChild(leaderRow);
+      }
+    }, 0);
+  }
+
+  // Wrap openJoinFaction to ensure leaders are assigned, NPC lists synced,
+  // and the leader line inserted whenever the faction menu is opened.
+  const origOpenJoinFaction = W.openJoinFaction;
+  W.openJoinFaction = function() {
+    // Always sync NPC lists
+    try { syncNPCLists(); } catch (e) {}
+    // Before opening, assign leaders so the current faction has one
+    try { assignFactionLeaders(); } catch (e) {}
+    // Call the original function
+    if (typeof origOpenJoinFaction === 'function') {
+      origOpenJoinFaction.apply(this, arguments);
+    }
+    // If in a faction, insert leader info into the modal
+    if (state && state.faction && state.faction !== 'none') {
+      injectLeaderIntoFactionModal(state.faction);
+    }
+  };
+
+  // Patch updateUI to always sync NPC lists and assign leaders. This
+  // ensures the Social panel and other UIs display up-to-date NPCs and
+  // leaders after any state change.
+  const origUpdateUI = W.updateUI;
+  W.updateUI = function() {
+    if (typeof origUpdateUI === 'function') {
+      origUpdateUI.apply(this, arguments);
+    }
+    try {
+      syncNPCLists();
+      assignFactionLeaders();
+    } catch (e) {}
+  };
+
+  // On first load/new run, perform an initial sync and leader assignment
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      try { syncNPCLists(); assignFactionLeaders(); } catch (e) {}
+    });
+  } else {
+    try { syncNPCLists(); assignFactionLeaders(); } catch (e) {}
+  }
+})();</script>
+<script>// settlement.js
+/* Settlement / Base Building Expansion
+ * This module introduces a personal settlement system where players can collect scrap
+ * and construct buildings that provide long‑term benefits. Players can manage
+ * their base via the new "Your Settlement" button. Building consumes scrap
+ * (represented by the existing 'Junk' item) and time (world ticks) but yields
+ * lasting advantages like increased HP, better resource generation, or defense.
+ */
+
+(function(W){
+  // Define available building blueprints. Each structure has a name, cost
+  // (amount of scrap required), description, and an effect callback that
+  // modifies the player's state when constructed. Effects run once on build.
+  const BUILDINGS = {
+    shack: {
+      name: "Shack",
+      cost: 10,
+      desc: "A crude shelter. +5 maximum HP; +2 resident capacity.",
+      capAdd: 2,
+      effect: ()=>{
+        state.hpMax += 5;
+        state.hp = Math.min(state.hp, state.hpMax);
+        W.log("You feel a bit safer under a roof. Max HP +5.");
+      }
+    },
+    waterStill: {
+      name: "Water Still",
+      cost: 15,
+      desc: "Purifies water. Reduces radiation intake during travel.",
+      capAdd: 0,
+      effect: ()=>{
+        // Grant a small permanent rad shield: reduce incoming RAD by 1
+        state.buffs.radShield = state.buffs.radShield || { turns: 0 };
+        state.buffs.radShield.turns += 1000; // effectively permanent
+        W.log("Fresh water flows at your camp. Radiation intake reduced.");
+      }
+    },
+    workshop: {
+      name: "Workshop",
+      cost: 20,
+      desc: "Allows simple crafting. Provides occasional free consumables and +1 resident capacity.",
+      capAdd: 1,
+      effect: ()=>{
+        // Unlock occasional random item each year via world ticks
+        state.hasWorkshop = true;
+        W.log("Your workshop is ready. You can craft basic items and occasionally find supplies.");
+      }
+    },
+    watchTower: {
+      name: "Watch Tower",
+      cost: 25,
+      desc: "Improves camp defense. Reduces chance of raider attacks.",
+      capAdd: 0,
+      effect: ()=>{
+        state.settlement.defense = (state.settlement.defense || 0) + 10;
+        W.log("A watch tower stands over your settlement. Raiders will think twice.");
+      }
+    }
+  };
+
+  /** Initialize the settlement for a new run if it doesn't exist. */
+  function initSettlement(){
+    if (!state.settlement) {
+      state.settlement = {
+        scrap: 0,
+        buildings: [],
+        defense: 0,
+        name: "Camp",
+        residents: [],
+        capacity: 2,
+        // No allegiance by default (independent)
+        allegiance: null
+      };
+    } else {
+      // Backfill missing properties on older saves
+      if (!('name' in state.settlement)) state.settlement.name = "Camp";
+      if (!Array.isArray(state.settlement.residents)) state.settlement.residents = [];
+      if (typeof state.settlement.capacity !== 'number') state.settlement.capacity = 2;
+      if (typeof state.settlement.defense !== 'number') state.settlement.defense = state.settlement.defense || 0;
+      if (!('allegiance' in state.settlement)) state.settlement.allegiance = null;
+    }
+  }
+
+  /** Collect scrap from scavenge. Adds 1–3 scrap and increments world tick. */
+  function collectScrap(){
+    const amt = 1 + Math.floor(Math.random()*3);
+    state.settlement.scrap += amt;
+    W.log(`You scavenge the wasteland for materials. +${amt} scrap.`);
+    // increment world tick for background simulation
+    if (typeof W.incrementWorldTick === "function") W.incrementWorldTick();
+    W.updateUI && W.updateUI();
+    // Show the settlement panel again after collection
+    openSettlement();
+  }
+
+  /** Build a structure if enough scrap is available. Applies the structure's effect. */
+  function buildStructure(key){
+    const b = BUILDINGS[key];
+    if (!b) return;
+    if (state.settlement.scrap < b.cost) {
+      W.log("Not enough scrap to build " + b.name + ".", "danger");
+      return;
+    }
+    // Spend scrap and add structure
+    state.settlement.scrap -= b.cost;
+    state.settlement.buildings.push(key);
+    // Apply building effect
+    if (typeof b.effect === "function") b.effect();
+    // Increase resident capacity if building grants it
+    if (typeof b.capAdd === "number" && b.capAdd > 0) {
+      state.settlement.capacity = (state.settlement.capacity || 0) + b.capAdd;
+    }
+    // Increment world tick to reflect time spent building
+    if (typeof W.incrementWorldTick === "function") W.incrementWorldTick();
+    W.updateUI && W.updateUI();
+    // Refresh the settlement UI
+    openSettlement();
+  }
+
+  /** Generate the settlement modal UI. */
+  function openSettlement(){
+    initSettlement();
+    const m = W.openModal(state.settlement.name || "Your Settlement");
+    const c = m.content;
+    // Name row with rename
+    const nameRow = el("div","kv");
+    nameRow.append(el("div", null, "Name"));
+    const nameBox = el("div");
+    nameBox.append(el("span", null, state.settlement.name || "Camp"));
+    const renameBtn = el("button","choice small", "Rename");
+    renameBtn.onclick = ()=>{
+      const newName = prompt("Enter a name for your settlement:", state.settlement.name || "");
+      if (newName && newName.trim().length) {
+        state.settlement.name = newName.trim();
+        openSettlement();
+      }
+    };
+    nameBox.append(renameBtn);
+    nameRow.append(nameBox);
+    c.append(nameRow);
+    // Scrap total
+    const scrapRow = el("div","kv");
+    scrapRow.append(el("div", null, "Scrap"));
+    scrapRow.append(el("div", null, `${state.settlement.scrap}`));
+    c.append(scrapRow);
+    // Population and capacity
+    const popRow = el("div","kv");
+    popRow.append(el("div", null, "Population"));
+    const pop = state.settlement.residents?.length || 0;
+    const cap = state.settlement.capacity || 0;
+    popRow.append(el("div", null, `${pop}/${cap}`));
+    c.append(popRow);
+    // Allegiance row
+    const allyRow = el("div","kv");
+    allyRow.append(el("div", null, "Allegiance"));
+    const allyBox = el("div");
+    // Determine display name for allegiance
+    let allyName = "Neutral";
+    if (state.settlement.allegiance) {
+      const fid = state.settlement.allegiance;
+      if (Array.isArray(W.FACTIONS)) {
+        const fobj = W.FACTIONS.find(f => f.id === fid);
+        allyName = fobj ? fobj.name : fid;
+      } else {
+        allyName = fid;
+      }
+    }
+    allyBox.append(el("span", null, allyName));
+    const changeBtn = el("button","choice small", "Change");
+    changeBtn.onclick = () => {
+      // Build a set of possible allegiances: residents' factions, all factions, plus none
+      const choices = new Set();
+      choices.add("none");
+      (state.settlement.residents || []).forEach(rid=>{
+        const npc = (LW.state && LW.state.npcs) ? LW.state.npcs.find(n => n.id === rid) : null;
+        if (npc && npc.factionId) choices.add(npc.factionId);
+      });
+      if (Array.isArray(W.FACTIONS)) {
+        W.FACTIONS.forEach(f => choices.add(f.id));
+      }
+      const list = Array.from(choices);
+      const current = state.settlement.allegiance || "none";
+      const input = prompt(`Choose allegiance (${list.join(', ')}). Current: ${current}`, current);
+      if (!input) return;
+      const choice = input.trim().toLowerCase();
+      let newAlly = null;
+      if (choice === "none" || choice === "neutral" || choice === "independent") {
+        newAlly = null;
+      } else {
+        let fid = null;
+        if (Array.isArray(W.FACTIONS)) {
+          const matchById = W.FACTIONS.find(f => f.id.toLowerCase() === choice);
+          if (matchById) fid = matchById.id;
+          else {
+            const matchByName = W.FACTIONS.find(f => f.name.toLowerCase() === choice);
+            if (matchByName) fid = matchByName.id;
+          }
+        }
+        fid = fid || choice;
+        newAlly = fid;
+      }
+      const prevAlly = state.settlement.allegiance;
+      state.settlement.allegiance = newAlly;
+      // Adjust faction reputation when allegiance changes
+      state.factionRep = state.factionRep || {};
+      if (prevAlly !== newAlly) {
+        if (newAlly) {
+          state.factionRep[newAlly] = (state.factionRep[newAlly] || 0) + 5;
+          if (Array.isArray(W.FACTIONS)) {
+            W.FACTIONS.forEach(f => {
+              if (f.id !== newAlly) state.factionRep[f.id] = (state.factionRep[f.id] || 0) - 2;
+            });
+          }
+          if (typeof W.log === "function") {
+            const allyDisplay = Array.isArray(W.FACTIONS) ? (W.FACTIONS.find(f => f.id === newAlly)?.name || newAlly) : newAlly;
+            W.log(`Your settlement pledges allegiance to ${allyDisplay}.`, "muted");
+          }
+        } else {
+          if (typeof W.log === "function") W.log("Your settlement is now independent.", "muted");
+        }
+      }
+      openSettlement();
+    };
+    allyBox.append(changeBtn);
+    allyRow.append(allyBox);
+    c.append(allyRow);
+    // Defense row
+    const defRow = el("div","kv");
+    defRow.append(el("div", null, "Defense"));
+    defRow.append(el("div", null, `${state.settlement.defense || 0}`));
+    c.append(defRow);
+    // Built structures
+    c.append(el("div","hr"));
+    const builtTitle = el("div","title"); builtTitle.textContent = "Built Structures";
+    c.append(builtTitle);
+    if (!state.settlement.buildings.length){
+      c.append(el("p","muted","(none yet)"));
+    } else {
+      state.settlement.buildings.forEach(key=>{
+        const b = BUILDINGS[key];
+        const row = el("div","kv");
+        row.append(el("div", null, b.name));
+        row.append(el("div","small muted", b.desc));
+        c.append(row);
+      });
+    }
+    // Residents list
+    c.append(el("div","hr"));
+    const resTitle = el("div","title"); resTitle.textContent = "Residents";
+    c.append(resTitle);
+    const resList = state.settlement.residents || [];
+    if (!resList.length){
+      c.append(el("p","muted","(no residents yet)"));
+    } else {
+      resList.forEach(rid=>{
+        const npc = (LW.state && LW.state.npcs) ? LW.state.npcs.find(n => n.id === rid) : null;
+        if (!npc) return;
+        const row = el("div","kv");
+        row.append(el("div", null, `${npc.name}`));
+        const right = el("div");
+        right.append(el("div","small muted", npc.role || "Resident"));
+        const talkBtn = el("button","choice small", "Talk");
+        talkBtn.onclick = ()=>{
+          if (typeof LW.openNPC === "function") {
+            LW.openNPC(npc.id);
+          }
+        };
+        right.append(talkBtn);
+        row.append(right);
+        c.append(row);
+      });
+    }
+    // Faction influence summary
+    c.append(el("div","hr"));
+    const facTitle = el("div","title"); facTitle.textContent = "Faction Influence";
+    c.append(facTitle);
+    const counts = {};
+    (state.settlement.residents || []).forEach(rid=>{
+      const npc = (LW.state && LW.state.npcs) ? LW.state.npcs.find(n => n.id === rid) : null;
+      if (npc && npc.factionId) {
+        counts[npc.factionId] = (counts[npc.factionId] || 0) + 1;
+      }
+    });
+    if (Object.keys(counts).length === 0) {
+      c.append(el("p","muted","(neutral)"));
+    } else {
+      Object.keys(counts).forEach(fid => {
+        let fname = fid;
+        if (Array.isArray(W.FACTIONS)){
+          const fobj = W.FACTIONS.find(f => f.id === fid);
+          if (fobj) fname = fobj.name;
+        }
+        const row = el("div","kv");
+        row.append(el("div", null, fname));
+        row.append(el("div", null, `${counts[fid]}`));
+        c.append(row);
+      });
+    }
+    // Available construction options
+    c.append(el("div","hr"));
+    const availTitle = el("div","title"); availTitle.textContent = "Available Constructions";
+    c.append(availTitle);
+    Object.keys(BUILDINGS).forEach(key=>{
+      const builtCount = state.settlement.buildings.filter(b=>b===key).length;
+      if (builtCount && key === "shack") return;
+      const b = BUILDINGS[key];
+      const row = el("div","kv");
+      row.append(el("div", null, `${b.name} (Cost: ${b.cost} scrap)`));
+      const right = el("div");
+      right.append(el("div","small muted", b.desc));
+      const btn = el("button","choice", "Build");
+      btn.disabled = state.settlement.scrap < b.cost;
+      btn.onclick = ()=>{ buildStructure(key); };
+      right.append(btn);
+      row.append(right);
+      c.append(row);
+    });
+    // Actions: scrap collection
+    c.append(el("div","hr"));
+    const scrapRow2 = el("div","kv");
+    scrapRow2.append(el("div", null, "Actions"));
+    const actBox = el("div");
+    const scavengeBtn = el("button","choice", "Scavenge for Scrap");
+    scavengeBtn.onclick = collectScrap;
+    actBox.append(scavengeBtn);
+    scrapRow2.append(actBox);
+    c.append(scrapRow2);
+  }
+
+  // Hook up the settlement button after DOM has loaded
+  document.addEventListener("DOMContentLoaded", ()=>{
+    const btn = document.getElementById("btn-settlement");
+    if (btn) btn.onclick = openSettlement;
+  });
+
+  // Expose functions for other modules if needed
+  W.initSettlement = initSettlement;
+  W.openSettlement = openSettlement;
+
+  // Attempt to spawn a new resident if capacity allows. Called after each world simulation.
+  function maybeSpawnResident(){
+    if (!state.settlement) return;
+    const cap = state.settlement.capacity || 0;
+    const pop = state.settlement.residents?.length || 0;
+    if (pop >= cap) return;
+    // Chance for new settler
+    if (Math.random() < 0.3) {
+      try {
+        if (typeof W.spawnNPC === "function") {
+          W.spawnNPC();
+          const arr = (LW.state && LW.state.npcs) || [];
+          const npc = arr[arr.length - 1];
+          if (npc) {
+            // If settlement has an allegiance, there is a higher chance new settlers belong to that faction
+            if (state.settlement && state.settlement.allegiance && Math.random() < 0.8) {
+              npc.factionId = state.settlement.allegiance;
+            }
+            npc.locId = state.locationId;
+            npc.location = state.location;
+            state.settlement.residents = state.settlement.residents || [];
+            state.settlement.residents.push(npc.id);
+            if (typeof W.log === "function") W.log(`A wanderer named ${npc.name} joins your settlement.`, "muted");
+          }
+        }
+      } catch(e) { console.error("Error spawning resident", e); }
+    }
+  }
+
+  /** Apply faction allegiance effects each time the world simulation runs.
+   * Settlers grant extra scrap, Rangers bolster defense, Scribes improve rad protection,
+   * and Dust Marauders provide lots of scrap but erode defenses. Neutral yields no effect.
+   */
+  function applyAllegianceEffects(){
+    if (!state.settlement || !state.settlement.allegiance) return;
+    const fid = state.settlement.allegiance;
+    switch(fid){
+      case 'settlers':
+        state.settlement.scrap = (state.settlement.scrap || 0) + 2;
+        if (typeof W.log === 'function') W.log("Settler allies send supplies (+2 scrap).", "muted");
+        break;
+      case 'rangers':
+        state.settlement.defense = (state.settlement.defense || 0) + 2;
+        if (typeof W.log === 'function') W.log("Rangers train your guards (+2 defense).", "muted");
+        break;
+      case 'scribes':
+        state.buffs = state.buffs || {};
+        state.buffs.radShield = state.buffs.radShield || { turns: 0 };
+        state.buffs.radShield.turns += 5;
+        if (typeof W.log === 'function') W.log("Scribes share knowledge of radiation shielding.", "muted");
+        break;
+      case 'dust_marauders':
+        state.settlement.scrap = (state.settlement.scrap || 0) + 4;
+        // Marauders often sabotage your defenses in their rowdy ways
+        state.settlement.defense = Math.max(0, (state.settlement.defense || 0) - 1);
+        if (typeof W.log === 'function') W.log("Dust Marauders send loot (+4 scrap) but roughhouse your defenses (-1).", "warning");
+        break;
+      default:
+        // unknown allegiance: minor benefit
+        state.settlement.scrap = (state.settlement.scrap || 0) + 1;
+        break;
+    }
+  }
+
+  // Wrap runWorldSimulation to include settlement growth
+  document.addEventListener("DOMContentLoaded", ()=>{
+    const origSim = W.runWorldSimulation;
+    if (origSim) {
+      W.runWorldSimulation = function(){
+        const res = origSim.apply(this, arguments);
+        maybeSpawnResident();
+        // Apply allegiance effects after world simulation
+        if (typeof applyAllegianceEffects === "function") applyAllegianceEffects();
+        return res;
+      };
+    }
+  });
+})(window);</script>
 </body>
 </html>
-
-
-
