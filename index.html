@@ -1214,6 +1214,60 @@ function newRun() {
 
 
 
+
+
+
+
+// === Save & Load (top level) ===
+function saveGame() {
+  try {
+    // (Optional) Skinny the log so saves stay small:
+    // const trimmed = { ...state, log: state.log.slice(0, 200) };
+    localStorage.setItem("wastelifeSave", JSON.stringify(state));
+    log("Game saved.");
+    return true;
+  } catch (e) {
+    console.error("Save failed:", e);
+    log("Save failed.");
+    return false;
+  }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem("wastelifeSave");
+    if (!raw) return false;
+    state = JSON.parse(raw);
+    updateUI();
+    log("Game loaded.");
+    return true;
+  } catch (e) {
+    console.error("Load failed:", e);
+    log("Load failed.");
+    return false;
+  }
+}
+
+// === Boot once DOM is ready ===
+document.addEventListener("DOMContentLoaded", () => {
+  // Wire button handlers ONCE
+  $("#btn-save").onclick = saveGame;
+  $("#btn-load").onclick = () => loadGame() || log("No saved game found.");
+  $("#btn-reset").onclick = () => { newRun(); saveGame(); };
+
+  // Try to restore; otherwise start fresh
+  if (!loadGame()) newRun();
+
+  // Light autosave: when tab hides or page unloads
+  window.addEventListener("beforeunload", saveGame);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") saveGame();
+  });
+});
+
+
+
+
 /* ========= UI ========= */
 function updateUI() {
   $("#name").textContent = state.name;
@@ -1237,6 +1291,7 @@ function updateUI() {
       ? "Join a Faction"
       : "View Faction";
   }
+
 
   // --- Faction pill update ---
   const f = getFaction();
