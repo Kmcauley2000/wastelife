@@ -349,18 +349,7 @@ footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   }</style>
 </head>
 <body>
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Wastelife: A Post-Apocalyptic Life Sim</title>
-<link rel="stylesheet" href="layout/variables/variables.css">
-<link rel="stylesheet" href="layout/layout/layout.css">
-<link rel="stylesheet" href="layout/components/components.css">
-<link rel="stylesheet" href="layout/game/game.css">
-</head>
-<body>
+
 <div class="wrap">
 <header class="card">
 <h1 class="title">WASTELIFE ▸ <span class="muted" id="header-status">new run</span></h1>
@@ -1221,9 +1210,8 @@ function newRun() {
 // === Save & Load (top level) ===
 function saveGame() {
   try {
-    // (Optional) Skinny the log so saves stay small:
-    // const trimmed = { ...state, log: state.log.slice(0, 200) };
-    localStorage.setItem("wastelifeSave", JSON.stringify(state));
+    const trimmed = { ...state, log: Array.isArray(state?.log) ? state.log.slice(-200) : [] };
+    localStorage.setItem("wastelifeSave", JSON.stringify(trimmed));
     log("Game saved.");
     return true;
   } catch (e) {
@@ -6794,5 +6782,6 @@ function section(titleText){
     }
   });
 })(window);</script>
+
 </body>
 </html>
