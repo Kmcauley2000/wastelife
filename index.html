@@ -1,10 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
+
 <script>
   (function () {
-    var host = "kmcauley2000.github.io";   // <- your Pages domain
-    var path = "/wastelife/";              // <- repo path (with trailing slash)
+    var host = "kmcauley2000.github.io";   // <- change if your Pages host differs
+    var path = "/wastelife/";              // <- change if your repo path differs
     if (location.hostname !== host || !location.pathname.startsWith(path)) {
       location.replace("https://" + host + path);
     }
@@ -359,7 +360,18 @@ footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   }</style>
 </head>
 <body>
-
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Wastelife: A Post-Apocalyptic Life Sim</title>
+<link rel="stylesheet" href="layout/variables/variables.css">
+<link rel="stylesheet" href="layout/layout/layout.css">
+<link rel="stylesheet" href="layout/components/components.css">
+<link rel="stylesheet" href="layout/game/game.css">
+</head>
+<body>
 <div class="wrap">
 <header class="card">
 <h1 class="title">WASTELIFE ▸ <span class="muted" id="header-status">new run</span></h1>
@@ -1166,6 +1178,57 @@ function generateEnemy(tier="wastes"){
 
 const SPECIAL_KEYS = ["S","P","E","C","I","A","L"];
 
+
+/* ========= Storage Helpers (IndexedDB + Persistence) ========= */
+const WL_DB_NAME = "wastelife_db";
+const WL_STORE = "kv";
+const WL_KEY = "wastelifeSave";
+
+function idbOpen(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(WL_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(WL_STORE)) db.createObjectStore(WL_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function idbGet(key){
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(WL_STORE, "readonly");
+    const store = tx.objectStore(WL_STORE);
+    const get = store.get(key);
+    get.onsuccess = () => resolve(get.result || null);
+    get.onerror = () => reject(get.error);
+  }));
+}
+
+function idbSet(key, val){
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(WL_STORE, "readwrite");
+    const store = tx.objectStore(WL_STORE);
+    const put = store.put(val, key);
+    put.onsuccess = () => resolve(true);
+    put.onerror = () => reject(put.error);
+  }));
+}
+
+async function ensurePersistence(){
+  try {
+    if (navigator.storage && navigator.storage.persisted) {
+      const persisted = await navigator.storage.persisted();
+      if (!persisted && navigator.storage.persist) {
+        await navigator.storage.persist();
+      }
+    }
+  } catch (e) {
+    // Non-fatal; just continue
+  }
+}
+
 /* ========= Game State ========= */
 let state = null;
 
@@ -1221,7 +1284,10 @@ function newRun() {
 function saveGame() {
   try {
     const trimmed = { ...state, log: Array.isArray(state?.log) ? state.log.slice(-200) : [] };
-    localStorage.setItem("wastelifeSave", JSON.stringify(trimmed));
+    // localStorage (sync)
+    localStorage.setItem(WL_KEY, JSON.stringify(trimmed));
+    // IndexedDB (async, fire-and-forget)
+    try { idbSet(WL_KEY, JSON.stringify(trimmed)); } catch(e){}
     log("Game saved.");
     return true;
   } catch (e) {
@@ -1231,9 +1297,12 @@ function saveGame() {
   }
 }
 
-function loadGame() {
+async function loadGame() {
   try {
-    const raw = localStorage.getItem("wastelifeSave");
+    let raw = localStorage.getItem(WL_KEY);
+    if (!raw) {
+      try { raw = await idbGet(WL_KEY); } catch(e){ raw = null; }
+    }
     if (!raw) return false;
     state = JSON.parse(raw);
     updateUI();
@@ -1254,7 +1323,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btn-reset").onclick = () => { newRun(); saveGame(); };
 
   // Try to restore; otherwise start fresh
-  if (!loadGame()) newRun();
+  loadGame().then(ok => { if (!ok) newRun(); });
 
   // iOS-friendly autosave
   window.addEventListener("pagehide", () => { try { saveGame(); } catch(e){} }, { passive:true });
@@ -6792,6 +6861,5 @@ function section(titleText){
     }
   });
 })(window);</script>
-
 </body>
 </html>
