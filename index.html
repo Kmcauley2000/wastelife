@@ -1,6 +1,16 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>
+  (function () {
+    var host = "kmcauley2000.github.io";   // <- your Pages domain
+    var path = "/wastelife/";              // <- repo path (with trailing slash)
+    if (location.hostname !== host || !location.pathname.startsWith(path)) {
+      location.replace("https://" + host + path);
+    }
+  })();
+</script>
+
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Wastelife: A Post-Apocalyptic Life Sim</title>
