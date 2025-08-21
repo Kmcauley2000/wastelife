@@ -1251,20 +1251,19 @@ function loadGame() {
 // === Boot once DOM is ready ===
 document.addEventListener("DOMContentLoaded", () => {
   // Wire button handlers ONCE
-  $("#btn-save").onclick = saveGame;
-  $("#btn-load").onclick = () => loadGame() || log("No saved game found.");
+  $("#btn-save").onclick  = () => saveGame();
+  $("#btn-load").onclick  = () => loadGame() || log("No saved game found.");
   $("#btn-reset").onclick = () => { newRun(); saveGame(); };
 
   // Try to restore; otherwise start fresh
   if (!loadGame()) newRun();
 
-  // Light autosave: when tab hides or page unloads
-  window.addEventListener("beforeunload", saveGame);
+  // iOS-friendly autosave
+  window.addEventListener("pagehide", () => { try { saveGame(); } catch(e){} }, { passive:true });
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") saveGame();
+    if (document.visibilityState === "hidden") { try { saveGame(); } catch(e){} }
   });
 });
-
 
 
 
@@ -3157,63 +3156,6 @@ function playerBattleStats(){
 
 
 
-
-
-
-/* ========= Save/Load ========= */
-// NOTE: Saves state into localStorage
-// - If you add new state fields, they’ll be saved automatically
-
-function save(){
-  try {
-    localStorage.setItem("wastelife-save", JSON.stringify(state));
-    info("Game saved.");
-  } catch (e) {
-    console.error(e);
-    log("Save failed (storage full or blocked).","muted");
-  }
-}
-
-function load(){
-  const raw = localStorage.getItem("wastelife-save");
-  if (!raw){ info("No save found."); return; }
-
-  try {
-    // parse and assign
-    state = JSON.parse(raw);
- 
-     ensureCampaignState();
-
-    // --- backfill for older saves ---
-    if (!state.equipment) state.equipment = { head:null, chest:null, legs:null, weapon:null };
-    if (!Array.isArray(state.inventory)) state.inventory = [];
-    if (typeof state.factionRep !== "number") state.factionRep = 0;
-    if (!Array.isArray(state.perks)) state.perks = [];
-    if (!Array.isArray(state.log)) state.log = [];
-    if (!state.buffs) state.buffs = { radShield:{turns:0}, fleeBoost:0, atkBoost:0, strEnd:0, percInt:0 };
-    // migrate very old saves that used a number
-    if (typeof state.buffs.radShield === "number") {
-    state.buffs.radShield = { turns: Number(state.buffs.radShield) || 0 };
-}
-
-
-
-    // migrate any old inventory formats
-    migrateInventoryShape();
-
-    // backfill faction growth state on load
-    initFactionState();
-    // backfill settlement/base state on load
-    if (typeof initSettlement === "function") initSettlement();
-
-    info("Save loaded.");
-    updateUI();
-  } catch(e){
-    console.error(e);
-    log("Save file corrupted.","muted");
-  }
-}
-
 function migrateInventoryShape(){
   if (!Array.isArray(state.inventory)) state.inventory = [];
 
@@ -3587,9 +3529,7 @@ $("#btn-inventory").onclick = ()=> openInventory();
 $("#btn-join-faction").onclick = ()=> openJoinFaction();
 $("#btn-perks").onclick = ()=> openPerks();
 
-$("#btn-save").onclick = save;
-$("#btn-load").onclick = load;
-$("#btn-reset").onclick = reset;
+
 
 // --- Boot & wiring ---
 window.addEventListener("DOMContentLoaded", () => {
@@ -3622,10 +3562,6 @@ window.addEventListener("DOMContentLoaded", () => {
   $("#btn-join-faction").onclick = openJoinFaction;
   $("#btn-perks").onclick = openPerks;
 
-  // Save / load / reset
-  $("#btn-save").onclick = save;
-  $("#btn-load").onclick = () => { load(); ensureCampaignState(); updateUI(); };
-  $("#btn-reset").onclick = reset;
 
   // Make the faction pill open the faction menu
   $("#faction-pill-wrapper").onclick = openJoinFaction;
