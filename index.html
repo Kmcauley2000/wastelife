@@ -1287,14 +1287,14 @@ function newRun() {
 // === Save & Load (top level) ===
 function saveGame() {
   try {
+    // Keep the save small so iOS doesn't reject it
     const trimmed = { ...state, log: Array.isArray(state?.log) ? state.log.slice(-200) : [] };
-    localStorage.setItem(WL_KEY, JSON.stringify(trimmed));
-    try { idbSet(WL_KEY, JSON.stringify(trimmed)); } catch(e){}
+    localStorage.setItem("wastelifeSave", JSON.stringify(trimmed));
     log("Game saved.");
     return true;
   } catch (e) {
-    try { console.error("Save failed:", e); } catch(_){}
-    try { log("Save failed."); } catch(_){}
+    try { console.error("Save failed:", e); } catch {}
+    try { log("Save failed."); } catch {}
     return false;
   }
 }
@@ -6879,5 +6879,37 @@ function section(titleText){
   });
 })(window);</script>
 
+
+<script>
+// ---- Added: tickBuffs to prevent ReferenceError and correctly age buffs ----
+function tickBuffs(context) {
+  try {
+    if (!window.state) return;
+    state.buffs = state.buffs || {};
+    // normalize structures
+    state.buffs.radShield = state.buffs.radShield || { turns: 0 };
+    const keys = ["fleeBoost", "atkBoost", "strEnd", "percInt"];
+    for (const k of keys) {
+      const v = state.buffs[k];
+      if (typeof v === "number") continue;
+      if (v && typeof v.turns === "number") state.buffs[k] = v.turns;
+      else state.buffs[k] = state.buffs[k] || 0;
+    }
+    // only tick on real steps
+    const cx = String(context || "");
+    if (!["action","turn","combat"].includes(cx)) return;
+
+    // tick numeric buffs
+    for (const k of keys) {
+      state.buffs[k] = Math.max(0, (state.buffs[k] || 0) - 1);
+    }
+    // tick rad shield turns
+    const t = state.buffs.radShield.turns || 0;
+    state.buffs.radShield.turns = Math.max(0, t - 1);
+  } catch (e) {
+    try { log("JS error: " + e); } catch {}
+  }
+}
+</script>
 </body>
 </html>
